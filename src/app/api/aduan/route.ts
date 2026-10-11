@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import type { AduanPayload } from '@/lib/types';
 
-const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_URL!;
+const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbzWTaJzoIjGckdcCQKsfSGf_XP91y5hOaKvbgYe22EyFpr9PbhWiEmoyOJWnLkabPeCMw/exec';
+const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_URL || DEFAULT_URL;
 
 export async function POST(request: Request) {
   try {

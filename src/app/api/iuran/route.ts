@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
-const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_URL!;
+const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbzWTaJzoIjGckdcCQKsfSGf_XP91y5hOaKvbgYe22EyFpr9PbhWiEmoyOJWnLkabPeCMw/exec';
+const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_URL || DEFAULT_URL;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
