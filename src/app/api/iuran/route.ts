@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   try {
     const res = await fetch(
       `${APPS_SCRIPT_URL}?action=getIuran&period=${encodeURIComponent(period)}`,
-      { next: { revalidate: 60 } }
+      { next: { revalidate: 60 }, redirect: 'follow' }
     );
     const data = await res.json();
     return NextResponse.json(data);

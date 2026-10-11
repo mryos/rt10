@@ -12,7 +12,7 @@ export async function GET(request: Request) {
       ? `${APPS_SCRIPT_URL}?action=${action}&id=${encodeURIComponent(id)}`
       : `${APPS_SCRIPT_URL}?action=${action}`;
 
-    const res = await fetch(url, { next: { revalidate: 60 } });
+    const res = await fetch(url, { next: { revalidate: 60 }, redirect: 'follow' });
     const data = await res.json();
     return NextResponse.json(data);
   } catch (error) {

@@ -18,6 +18,7 @@ export async function POST(request: Request) {
     const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      redirect: 'follow',
       body: JSON.stringify({
         action: 'submitAduan',
         data: body,
