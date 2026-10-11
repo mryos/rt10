@@ -57,12 +57,41 @@ function setupSheets() {
   sheetIuran.setFrozenRows(1);
   sheetIuran.setFrozenColumns(2);
 
-  // Masukkan 70 baris rumah (Default belum lunas / FALSE)
+  // Nama-nama warga realistis untuk 70 rumah
+  var dummyNamaWarga = [
+    'Budi Santoso', 'Siti Rahmawati', 'Agus Setiawan', 'Dewi Lestari', 'Eko Prasetyo',
+    'Rina Wulandari', 'Hadi Purnomo', 'Sri Wahyuni', 'Bambang Irawan', 'Yuni Astuti',
+    'Ahmad Fauzi', 'Tri Mulyani', 'Rudi Hartono', 'Nur Hidayah', 'Hendro Wijaya',
+    'Endang Purwanti', 'Joko Susilo', 'Ratna Sari', 'Dedi Kurniawan', 'Anisa Putri',
+    'Surya Pratama', 'Indah Permata', 'Wahyu Wibowo', 'Maya Anggraini', 'Teguh Saputra',
+    'Dian Kusuma', 'Aris Munandar', 'Lestari Handayani', 'Fajar Nugroho', 'Retno Palupi',
+    'Bayu Aji', 'Ika Novita', 'Denny Firmansyah', 'Fitri Handayani', 'Hendra Gunawan',
+    'Nita Anggraeni', 'Rizky Ramadhan', 'Wulan Dari', 'Sigit Pamungkas', 'Erna Susanti',
+    'Ari Wibowo', 'Tuti Alawiyah', 'Imam Syafi\'i', 'Mega Utami', 'Panji Asmoro',
+    'Linda Herawati', 'Bagus Prakoso', 'Eni Sulistyo', 'Danang Joyo', 'Kartika Dewi',
+    'Yudi Hermawan', 'Farida Aryani', 'Anton Nugraha', 'Ratih Puspita', 'Haris Fadillah',
+    'Lia Amelia', 'Kurniawan Dwi', 'Desi Ratnasari', 'Lukman Hakim', 'Siska Maharani',
+    'Faisal Tanjung', 'Citra Kirana', 'Ridwan Kamil', 'Gita Gutawa', 'Iqbal Ramadhan',
+    'Tara Basro', 'Chicco Jerikho', 'Raisa Andriana', 'Afgan Syahreza', 'Isyana Sarasvati'
+  ];
+
+  // Masukkan 70 baris rumah beserta data dummy 2024
   var rowsIuran = [];
   for (var r = 0; r < blokList.length; r++) {
-    var row = [blokList[r], 'Warga ' + blokList[r]];
+    var namaWarga = dummyNamaWarga[r] || ('Warga ' + blokList[r]);
+    var row = [blokList[r], namaWarga];
+    
+    // Period headers ada 36 bulan (0-11: 2024, 12-23: 2025, 24-35: 2026)
     for (var p = 0; p < periodHeaders.length; p++) {
-      row.push(false);
+      if (p < 12) {
+        // Tahun 2024: Sebagian besar warga lunas (sekitar 80-85% lunas untuk simulasi realistis)
+        // Pola deterministik berbasis index agar ada variasi yang konsisten
+        var isLunas = ((r + p) % 7 !== 0 && (r * 3 + p) % 11 !== 0);
+        row.push(isLunas);
+      } else {
+        // Tahun 2025 & 2026 default belum lunas (false)
+        row.push(false);
+      }
     }
     rowsIuran.push(row);
   }
@@ -127,7 +156,56 @@ function setupSheets() {
     try { ss.deleteSheet(sheet1); } catch (e) {}
   }
 
-  SpreadsheetApp.getUi().alert('✅ Berhasil! Semua sheet (DB_Iuran, DB_Aduan, DB_Berita) telah siap dibuat dengan 70 rumah dan checkbox iuran.');
+  SpreadsheetApp.getUi().alert('✅ Berhasil! Semua sheet (DB_Iuran, DB_Aduan, DB_Berita) telah siap dibuat dengan 70 rumah, nama warga, dan data dummy iuran 2024.');
+}
+
+/**
+ * JALANKAN FUNGSI INI JIKA SHEET SUDAH ADA: isiDummyIuran2024()
+ * Fungsi ini khusus mengisi/mengupdate data dummy iuran tahun 2024 (Jan - Des 2024)
+ * tanpa menghapus struktur sheet yang sudah ada.
+ */
+function isiDummyIuran2024() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('DB_Iuran');
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert('❌ Sheet DB_Iuran tidak ditemukan. Jalankan setupSheets() terlebih dahulu.');
+    return;
+  }
+
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0];
+
+  // Cari index kolom Jan 2024 s/d Des 2024
+  var months = ['Jan 2024', 'Feb 2024', 'Mar 2024', 'Apr 2024', 'Mei 2024', 'Jun 2024',
+                'Jul 2024', 'Agu 2024', 'Sep 2024', 'Okt 2024', 'Nov 2024', 'Des 2024'];
+  
+  var colIndices = [];
+  for (var m = 0; m < months.length; m++) {
+    for (var c = 0; c < headers.length; c++) {
+      if (headers[c].toString().trim() === months[m]) {
+        colIndices.push(c);
+        break;
+      }
+    }
+  }
+
+  if (colIndices.length === 0) {
+    SpreadsheetApp.getUi().alert('❌ Kolom 2024 tidak ditemukan di header DB_Iuran.');
+    return;
+  }
+
+  // Isi data dummy ke baris 2 s/d baris terakhir
+  var totalRows = data.length - 1;
+  for (var r = 0; r < totalRows; r++) {
+    for (var i = 0; i < colIndices.length; i++) {
+      var colIdx = colIndices[i];
+      // Simulasi 80-85% warga lunas di 2024
+      var isLunas = ((r + i) % 7 !== 0 && (r * 3 + i) % 11 !== 0);
+      sheet.getRange(r + 2, colIdx + 1).setValue(isLunas);
+    }
+  }
+
+  SpreadsheetApp.getUi().alert('✅ Selesai! Data dummy iuran tahun 2024 (Jan - Des) berhasil diisi untuk ' + totalRows + ' rumah.');
 }
 
 // ============================================================
