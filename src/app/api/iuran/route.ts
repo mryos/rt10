@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbzplG4lUzK7HbaVVs5w22Ch5uDIlVFS7QkTP5Q15wBN6ptZKQ2W3MUvq68Os7ZGDKPqaw/exec';
+const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbw3H1EvZq5Oq97SbZKiR110py_1AqWOCHX08h4iWfeEmbQqrwZinF4ho3OYfOSLrbQUEA/exec';
 const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_URL || DEFAULT_URL;
 
 export async function GET(request: Request) {

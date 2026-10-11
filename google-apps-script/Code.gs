@@ -226,6 +226,16 @@ function doGet(e) {
         return respond(getBeritaData());
       case 'getBeritaById':
         return respond(getBeritaById(e.parameter.id));
+      case 'debugHeaders':
+        var ssDbg = SpreadsheetApp.getActiveSpreadsheet();
+        var shDbg = ssDbg.getSheetByName('DB_Iuran');
+        return respond({
+          success: true,
+          sheets: ssDbg.getSheets().map(function(s) { return s.getName(); }),
+          headers: shDbg ? shDbg.getDataRange().getValues()[0].map(function(h) {
+            return h instanceof Date ? Utilities.formatDate(h, 'Asia/Jakarta', 'yyyy-MM-dd') : h.toString();
+          }) : null
+        });
       default:
         return respond({ success: false, message: 'Aksi tidak valid' });
     }
@@ -276,15 +286,49 @@ function getIuranData(period) {
   var headers = data[0];
 
   var colIndex = -1;
+  var targetPeriod = period.toString().trim().toLowerCase().replace(/\s+/g, '');
+
   for (var c = 0; c < headers.length; c++) {
-    if (headers[c].toString().trim() === period.trim()) {
+    var hVal = headers[c];
+    var hStr = '';
+    if (hVal instanceof Date) {
+      hStr = Utilities.formatDate(hVal, 'Asia/Jakarta', 'MMM yyyy').toLowerCase().replace(/\s+/g, '');
+    } else {
+      hStr = hVal.toString().trim().toLowerCase().replace(/\s+/g, '');
+    }
+
+    if (hStr === targetPeriod) {
       colIndex = c;
       break;
     }
   }
 
+  // Jika belum cocok, coba perbandingan parsial (misal: "jan2024" di dalam "januari2024" atau sebaliknya)
   if (colIndex === -1) {
-    return { success: false, message: 'Periode tidak ditemukan: ' + period };
+    for (var c2 = 0; c2 < headers.length; c2++) {
+      var hVal2 = headers[c2];
+      var hStr2 = (hVal2 instanceof Date 
+        ? Utilities.formatDate(hVal2, 'Asia/Jakarta', 'MMM yyyy') 
+        : hVal2.toString()).trim().toLowerCase().replace(/\s+/g, '');
+      if (hStr2.indexOf(targetPeriod) !== -1 || targetPeriod.indexOf(hStr2) !== -1) {
+        colIndex = c2;
+        break;
+      }
+    }
+  }
+
+  if (colIndex === -1) {
+    // Ambil daftar header yang ada di sheet untuk memudahkan debugging
+    var availableHeaders = [];
+    for (var k = 0; k < Math.min(headers.length, 15); k++) {
+      var val = headers[k];
+      availableHeaders.push(val instanceof Date ? Utilities.formatDate(val, 'Asia/Jakarta', 'dd/MM/yyyy') : val.toString());
+    }
+    return { 
+      success: false, 
+      message: 'Periode tidak ditemukan: ' + period,
+      availableHeadersPreview: availableHeaders
+    };
   }
 
   var result = [];
