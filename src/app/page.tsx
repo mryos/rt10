@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import MonthYearPicker from '@/components/MonthYearPicker';
 import IuranTable from '@/components/IuranTable';
 import ExportButtons from '@/components/ExportButtons';
@@ -54,6 +55,35 @@ export default function DashboardPage() {
           <MonthYearPicker selectedPeriod={period} onPeriodChange={setPeriod} />
           {data.length > 0 && <ExportButtons data={data} period={period} />}
         </div>
+      </div>
+
+      {/* Modern Financial Dashboard Highlight Card */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-zinc-900 to-zinc-800 text-white shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0 text-emerald-400">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-xs sm:text-sm font-semibold tracking-tight">
+              Laporan Keuangan & Mutasi Kas Terbuka
+            </h2>
+            <p className="text-[11px] text-zinc-400 mt-0.5">
+              Lihat neraca saldo kas, grafik alokasi belanja satpam & sampah, serta buku kas mutasi transparan.
+            </p>
+          </div>
+        </div>
+
+        <Link
+          href="/keuangan"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white text-zinc-900 hover:bg-zinc-100 text-xs font-semibold rounded-xl transition-all shadow-xs shrink-0"
+        >
+          <span>Buka Dashboard Keuangan</span>
+          <svg className="w-3.5 h-3.5 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
+        </Link>
       </div>
 
       {/* Table Section */}

@@ -26,6 +26,53 @@ export interface AduanPayload {
   isiAduan: string;
 }
 
+export interface TransaksiKeuangan {
+  id: string;
+  tanggal: string;
+  kategori: string;
+  keterangan: string;
+  tipe: 'masuk' | 'keluar';
+  nominal: number;
+  saldoSetelah: number;
+  penanggungJawab: string;
+  noBukti?: string;
+}
+
+export interface KategoriAlokasi {
+  kategori: string;
+  nominal: number;
+  persentase: number;
+  warna: string;
+  deskripsi: string;
+  iconName?: string;
+}
+
+export interface PerformaBlokKeuangan {
+  blok: string;
+  totalRumah: number;
+  lunas: number;
+  nominalTerkumpul: number;
+  targetNominal: number;
+  persentase: number;
+}
+
+export interface RingkasanKeuangan {
+  periode: string;
+  tahun: number;
+  saldoAwal: number;
+  totalPemasukan: number;
+  totalPengeluaran: number;
+  saldoAkhir: number;
+  surplusDefisit: number;
+  targetIuran: number;
+  realisasiIuran: number;
+  persenKepatuhan: number;
+  alokasiPengeluaran: KategoriAlokasi[];
+  alokasiPemasukan: KategoriAlokasi[];
+  performaBlok: PerformaBlokKeuangan[];
+  transaksi: TransaksiKeuangan[];
+}
+
 export interface ApiResponse<T = unknown> {
   success: boolean;
   message?: string;

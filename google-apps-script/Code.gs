@@ -4,12 +4,12 @@
 // ============================================================
 
 /**
- * JALANKAN FUNGSI INI SEKALI SAJA: setupSheets()
- * Fungsi ini akan otomatis:
- * 1. Membuat tab DB_Iuran lengkap dengan 70 daftar blok/rumah (A3-A12, B1-B11, C1-C14, D3-D7, E1-E7, F1-F14, G1-G9),
- *    header Jan 2024 - Des 2026, dan Checkbox boolean.
- * 2. Membuat tab DB_Aduan dengan header kolom yang sesuai.
- * 3. Membuat tab DB_Berita dengan header dan data contoh awal.
+ * JALANKAN FUNGSI INI: setupSheets()
+ * Fungsi ini akan otomatis membuat 4 Tab:
+ * 1. DB_Iuran (70 rumah, Jan 2024 - Des 2026, Checkboxes)
+ * 2. DB_Aduan (Pencatatan aduan warga)
+ * 3. DB_Berita (Kanal warta RT)
+ * 4. DB_Keuangan (Laporan kas terbuka & mutasi buku kas)
  */
 function setupSheets() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -49,7 +49,6 @@ function setupSheets() {
   var headerRowIuran = ['No. Blok', 'Nama Warga'].concat(periodHeaders);
   sheetIuran.appendRow(headerRowIuran);
 
-  // Format header Iuran
   var headerRangeIuran = sheetIuran.getRange(1, 1, 1, headerRowIuran.length);
   headerRangeIuran.setBackground('#1E40AF')
                   .setFontColor('#FFFFFF')
@@ -81,15 +80,11 @@ function setupSheets() {
     var namaWarga = dummyNamaWarga[r] || ('Warga ' + blokList[r]);
     var row = [blokList[r], namaWarga];
     
-    // Period headers ada 36 bulan (0-11: 2024, 12-23: 2025, 24-35: 2026)
     for (var p = 0; p < periodHeaders.length; p++) {
       if (p < 12) {
-        // Tahun 2024: Sebagian besar warga lunas (sekitar 80-85% lunas untuk simulasi realistis)
-        // Pola deterministik berbasis index agar ada variasi yang konsisten
         var isLunas = ((r + p) % 7 !== 0 && (r * 3 + p) % 11 !== 0);
         row.push(isLunas);
       } else {
-        // Tahun 2025 & 2026 default belum lunas (false)
         row.push(false);
       }
     }
@@ -99,7 +94,6 @@ function setupSheets() {
   var dataRangeIuran = sheetIuran.getRange(2, 1, rowsIuran.length, headerRowIuran.length);
   dataRangeIuran.setValues(rowsIuran);
 
-  // Ubah cell data bulan menjadi Checkbox
   var checkboxRange = sheetIuran.getRange(2, 3, rowsIuran.length, periodHeaders.length);
   checkboxRange.insertCheckboxes();
 
@@ -139,7 +133,6 @@ function setupSheets() {
              .setFontWeight('bold');
   sheetBerita.setFrozenRows(1);
 
-  // Tambahkan contoh berita awal
   var todayStr = Utilities.formatDate(new Date(), 'Asia/Jakarta', 'dd MMM yyyy');
   sheetBerita.appendRow([
     '1',
@@ -150,19 +143,63 @@ function setupSheets() {
     'https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?w=800&auto=format&fit=crop&q=80'
   ]);
 
-  // Hapus sheet default 'Sheet1' jika ada dan tab lain sudah terbuat
+  // ------------------------------------------------------------
+  // 4. SETUP DB_Keuangan (Buku Kas & Mutasi Terbuka)
+  // ------------------------------------------------------------
+  setupDBKeuanganInternal(ss);
+
+  // Hapus sheet default 'Sheet1' jika ada
   var sheet1 = ss.getSheetByName('Sheet1') || ss.getSheetByName('Sheet 1');
   if (sheet1 && ss.getSheets().length > 1) {
     try { ss.deleteSheet(sheet1); } catch (e) {}
   }
 
-  SpreadsheetApp.getUi().alert('✅ Berhasil! Semua sheet (DB_Iuran, DB_Aduan, DB_Berita) telah siap dibuat dengan 70 rumah, nama warga, dan data dummy iuran 2024.');
+  SpreadsheetApp.getUi().alert('✅ Berhasil! Semua sheet (DB_Iuran, DB_Aduan, DB_Berita, DB_Keuangan) telah siap dibuat dengan data terisi.');
 }
 
 /**
- * JALANKAN FUNGSI INI JIKA SHEET SUDAH ADA: isiDummyIuran2024()
- * Fungsi ini khusus mengisi/mengupdate data dummy iuran tahun 2024 (Jan - Des 2024)
- * tanpa menghapus struktur sheet yang sudah ada.
+ * Fungsi khusus membuat atau mereset Tab DB_Keuangan saja
+ */
+function setupDBKeuangan() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  setupDBKeuanganInternal(ss);
+  SpreadsheetApp.getUi().alert('✅ Tab DB_Keuangan berhasil dibuat/diperbarui dengan data mutasi kas terbaru.');
+}
+
+function setupDBKeuanganInternal(ss) {
+  var sheet = ss.getSheetByName('DB_Keuangan');
+  if (!sheet) {
+    sheet = ss.insertSheet('DB_Keuangan');
+  } else {
+    sheet.clear();
+  }
+
+  var headers = ['ID', 'Tanggal', 'Tipe', 'Kategori', 'Keterangan', 'Nominal', 'SaldoSetelah', 'PenanggungJawab', 'NoBukti'];
+  sheet.appendRow(headers);
+  sheet.getRange(1, 1, 1, headers.length)
+       .setBackground('#0F172A')
+       .setFontColor('#FFFFFF')
+       .setFontWeight('bold');
+  sheet.setFrozenRows(1);
+
+  var sampleData = [
+    ['TRX-001', '05/01/2024', 'masuk', 'Iuran Wajib Warga', 'Penerimaan iuran kas bulanan warga (58 rumah lunas)', 2900000, 18400000, 'Bendahara RT', 'KW-01/IUR/2024'],
+    ['TRX-002', '08/01/2024', 'keluar', 'Keamanan Lingkungan', 'Honor dan konsumsi pos satpam malam 2 personel', 1600000, 16800000, 'Sie Keamanan', 'NOTA-01/SEC'],
+    ['TRX-003', '15/01/2024', 'keluar', 'Kebersihan & Sampah', 'Retribusi bulanan pengangkutan sampah warga', 950000, 15850000, 'Sie Kebersihan', 'KWT-DPS-01'],
+    ['TRX-004', '22/01/2024', 'keluar', 'Fasilitas & Lampu Jalan', 'Penggantian 4 unit bohlam LED PJU gang Blok C dan F', 260000, 15590000, 'Sie Sarpras', 'STR-TOKO-LISTRIK'],
+    ['TRX-005', '05/02/2024', 'masuk', 'Iuran Wajib Warga', 'Penerimaan iuran kas bulanan warga (61 rumah lunas)', 3050000, 18640000, 'Bendahara RT', 'KW-02/IUR/2024'],
+    ['TRX-006', '10/02/2024', 'masuk', 'Donasi & Sumbangan', 'Sumbangan sukarela renovasi kanopi Pos Ronda', 1250000, 19890000, 'Ketua RT', 'DON-02/E-KNP'],
+    ['TRX-007', '12/02/2024', 'keluar', 'Keamanan Lingkungan', 'Honor bulanan petugas satpam lingkungan & senter', 1650000, 18240000, 'Sie Keamanan', 'NOTA-02/SEC'],
+    ['TRX-008', '05/03/2024', 'masuk', 'Iuran Wajib Warga', 'Penerimaan iuran kas bulanan warga (59 rumah lunas)', 2950000, 21190000, 'Bendahara RT', 'KW-03/IUR/2024'],
+    ['TRX-009', '15/03/2024', 'keluar', 'Kebersihan & Sampah', 'Honor armada pengangkut sampah dan pembersihan parit', 950000, 20240000, 'Sie Kebersihan', 'KWT-DPS-03'],
+    ['TRX-010', '10/04/2024', 'keluar', 'Kegiatan Warga', 'Perlengkapan dan konsumsi Halal Bihalal Idul Fitri', 1350000, 18890000, 'Panitia HB', 'NOTA-HB-1445']
+  ];
+
+  sheet.getRange(2, 1, sampleData.length, headers.length).setValues(sampleData);
+}
+
+/**
+ * Isi Dummy Iuran 2024
  */
 function isiDummyIuran2024() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -175,7 +212,6 @@ function isiDummyIuran2024() {
   var data = sheet.getDataRange().getValues();
   var headers = data[0];
 
-  // Cari index kolom Jan 2024 s/d Des 2024
   var months = ['Jan 2024', 'Feb 2024', 'Mar 2024', 'Apr 2024', 'Mei 2024', 'Jun 2024',
                 'Jul 2024', 'Agu 2024', 'Sep 2024', 'Okt 2024', 'Nov 2024', 'Des 2024'];
   
@@ -194,12 +230,10 @@ function isiDummyIuran2024() {
     return;
   }
 
-  // Isi data dummy ke baris 2 s/d baris terakhir
   var totalRows = data.length - 1;
   for (var r = 0; r < totalRows; r++) {
     for (var i = 0; i < colIndices.length; i++) {
       var colIdx = colIndices[i];
-      // Simulasi 80-85% warga lunas di 2024
       var isLunas = ((r + i) % 7 !== 0 && (r * 3 + i) % 11 !== 0);
       sheet.getRange(r + 2, colIdx + 1).setValue(isLunas);
     }
@@ -212,9 +246,6 @@ function isiDummyIuran2024() {
 // WEB APP API (doGet & doPost)
 // ============================================================
 
-/**
- * Handler GET requests
- */
 function doGet(e) {
   try {
     var action = e.parameter.action;
@@ -226,6 +257,8 @@ function doGet(e) {
         return respond(getBeritaData());
       case 'getBeritaById':
         return respond(getBeritaById(e.parameter.id));
+      case 'getKeuangan':
+        return respond(getKeuanganData(e.parameter.year, e.parameter.month));
       case 'debugHeaders':
         var ssDbg = SpreadsheetApp.getActiveSpreadsheet();
         var shDbg = ssDbg.getSheetByName('DB_Iuran');
@@ -244,9 +277,6 @@ function doGet(e) {
   }
 }
 
-/**
- * Handler POST requests
- */
 function doPost(e) {
   try {
     var payload = JSON.parse(e.postData.contents);
@@ -303,7 +333,6 @@ function getIuranData(period) {
     }
   }
 
-  // Jika belum cocok, coba perbandingan parsial (misal: "jan2024" di dalam "januari2024" atau sebaliknya)
   if (colIndex === -1) {
     for (var c2 = 0; c2 < headers.length; c2++) {
       var hVal2 = headers[c2];
@@ -318,7 +347,6 @@ function getIuranData(period) {
   }
 
   if (colIndex === -1) {
-    // Ambil daftar header yang ada di sheet untuk memudahkan debugging
     var availableHeaders = [];
     for (var k = 0; k < Math.min(headers.length, 15); k++) {
       var val = headers[k];
@@ -342,6 +370,37 @@ function getIuranData(period) {
   }
 
   return { success: true, period: period, data: result };
+}
+
+// ============================================================
+// KEUANGAN DATA
+// ============================================================
+function getKeuanganData(year, month) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('DB_Keuangan');
+  if (!sheet) {
+    return { success: false, message: 'Sheet DB_Keuangan belum ada. Menggunakan mode kalkulasi otomatis.' };
+  }
+
+  var data = sheet.getDataRange().getValues();
+  var result = [];
+
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] === '' || data[i][0] === null) continue;
+    result.push({
+      id: data[i][0].toString(),
+      tanggal: data[i][1] instanceof Date ? Utilities.formatDate(data[i][1], 'Asia/Jakarta', 'dd MMM yyyy') : data[i][1].toString(),
+      tipe: data[i][2].toString(),
+      kategori: data[i][3].toString(),
+      keterangan: data[i][4].toString(),
+      nominal: Number(data[i][5]) || 0,
+      saldoSetelah: Number(data[i][6]) || 0,
+      penanggungJawab: (data[i][7] || '').toString(),
+      noBukti: (data[i][8] || '').toString()
+    });
+  }
+
+  return { success: true, data: result };
 }
 
 // ============================================================
