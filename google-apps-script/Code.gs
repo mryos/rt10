@@ -185,13 +185,13 @@ function setupDBKeuanganInternal(ss) {
   var sampleData = [
     ['TRX-001', '05/01/2024', 'masuk', 'Iuran Wajib Warga', 'Penerimaan iuran kas bulanan warga (58 rumah lunas)', 2900000, 18400000, 'Bendahara RT', 'KW-01/IUR/2024'],
     ['TRX-002', '08/01/2024', 'keluar', 'Keamanan Lingkungan', 'Honor dan konsumsi pos satpam malam 2 personel', 1600000, 16800000, 'Sie Keamanan', 'NOTA-01/SEC'],
-    ['TRX-003', '15/01/2024', 'keluar', 'Kebersihan & Sampah', 'Retribusi bulanan pengangkutan sampah warga', 950000, 15850000, 'Sie Kebersihan', 'KWT-DPS-01'],
+    ['TRX-003', '15/01/2024', 'keluar', 'Kebersihan Lingkungan', 'Biaya pemeliharaan kebersihan lingkungan warga', 950000, 15850000, 'Sie Kebersihan', 'KWT-DPS-01'],
     ['TRX-004', '22/01/2024', 'keluar', 'Fasilitas & Lampu Jalan', 'Penggantian 4 unit bohlam LED PJU gang Blok C dan F', 260000, 15590000, 'Sie Sarpras', 'STR-TOKO-LISTRIK'],
     ['TRX-005', '05/02/2024', 'masuk', 'Iuran Wajib Warga', 'Penerimaan iuran kas bulanan warga (61 rumah lunas)', 3050000, 18640000, 'Bendahara RT', 'KW-02/IUR/2024'],
     ['TRX-006', '10/02/2024', 'masuk', 'Donasi & Sumbangan', 'Sumbangan sukarela renovasi kanopi Pos Ronda', 1250000, 19890000, 'Ketua RT', 'DON-02/E-KNP'],
     ['TRX-007', '12/02/2024', 'keluar', 'Keamanan Lingkungan', 'Honor bulanan petugas satpam lingkungan & senter', 1650000, 18240000, 'Sie Keamanan', 'NOTA-02/SEC'],
     ['TRX-008', '05/03/2024', 'masuk', 'Iuran Wajib Warga', 'Penerimaan iuran kas bulanan warga (59 rumah lunas)', 2950000, 21190000, 'Bendahara RT', 'KW-03/IUR/2024'],
-    ['TRX-009', '15/03/2024', 'keluar', 'Kebersihan & Sampah', 'Honor armada pengangkut sampah dan pembersihan parit', 950000, 20240000, 'Sie Kebersihan', 'KWT-DPS-03'],
+    ['TRX-009', '15/03/2024', 'keluar', 'Kebersihan Lingkungan', 'Honor petugas kebersihan bulanan dan pembersihan parit', 950000, 20240000, 'Sie Kebersihan', 'KWT-DPS-03'],
     ['TRX-010', '10/04/2024', 'keluar', 'Kegiatan Warga', 'Perlengkapan dan konsumsi Halal Bihalal Idul Fitri', 1350000, 18890000, 'Panitia HB', 'NOTA-HB-1445']
   ];
 

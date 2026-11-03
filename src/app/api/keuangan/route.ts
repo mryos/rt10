@@ -108,8 +108,8 @@ export async function GET(request: Request) {
       {
         id: 'TRX-2024-003',
         tanggal: '15 Jan 2024',
-        kategori: 'Kebersihan & Sampah',
-        keterangan: 'Retribusi bulanan pengangkutan sampah & kebersihan TPS warga',
+        kategori: 'Kebersihan Lingkungan',
+        keterangan: 'Biaya kebersihan lingkungan dan pemeliharaan saluran air warga',
         tipe: 'keluar',
         nominal: 950000,
         saldoSetelah: 15850000,
@@ -185,8 +185,8 @@ export async function GET(request: Request) {
       {
         id: 'TRX-2024-010',
         tanggal: '15 Mar 2024',
-        kategori: 'Kebersihan & Sampah',
-        keterangan: 'Honor pengangkutan sampah bulanan dan pembersihan selokan',
+        kategori: 'Kebersihan Lingkungan',
+        keterangan: 'Honor petugas kebersihan bulanan dan perawatan saluran parit',
         tipe: 'keluar',
         nominal: 950000,
         saldoSetelah: 19740000,
@@ -325,12 +325,12 @@ export async function GET(request: Request) {
         iconName: 'shield',
       },
       {
-        kategori: 'Kebersihan & Pengangkutan Sampah',
-        nominal: pengeluaranGroup['Kebersihan & Sampah'] || 1900000,
-        persentase: Math.round(((pengeluaranGroup['Kebersihan & Sampah'] || 1900000) / totalPengeluaran) * 100),
+        kategori: 'Kebersihan Lingkungan',
+        nominal: pengeluaranGroup['Kebersihan Lingkungan'] || 1900000,
+        persentase: Math.round(((pengeluaranGroup['Kebersihan Lingkungan'] || 1900000) / totalPengeluaran) * 100),
         warna: '#10B981', // emerald-500
-        deskripsi: 'Iuran bulanan armada pengangkut sampah & perawatan gerobak',
-        iconName: 'trash',
+        deskripsi: 'Perawatan kebersihan jalan lingkungan dan pembersihan saluran air',
+        iconName: 'sparkles',
       },
       {
         kategori: 'Kegiatan Warga & PHBI',

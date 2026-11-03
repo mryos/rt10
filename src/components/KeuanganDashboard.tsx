@@ -417,7 +417,7 @@ export default function KeuanganDashboard() {
               <span>Ketentuan Iuran Kas Warga RT 10</span>
             </div>
             <p className="text-[11px] text-zinc-500 leading-relaxed">
-              Iuran rutin ditetapkan sebesar <strong>Rp 50.000 / rumah / bulan</strong>, dibayarkan selambatnya tanggal 10 tiap bulan untuk kelancaran gaji satpam malam dan operasional kebersihan sampah lingkungan.
+              Iuran rutin ditetapkan sebesar <strong>Rp 50.000 / rumah / bulan</strong>, dibayarkan selambatnya tanggal 10 tiap bulan untuk kelancaran honor satpam malam dan operasional pemeliharaan lingkungan.
             </p>
           </div>
         </div>

@@ -6,11 +6,6 @@ import { usePathname } from 'next/navigation';
 const navLinks = [
   { 
     href: '/', 
-    label: 'Iuran Kas', 
-    icon: 'M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z' 
-  },
-  { 
-    href: '/keuangan', 
     label: 'Laporan Keuangan', 
     icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' 
   },
@@ -51,12 +46,16 @@ export default function Navbar() {
           {/* Navigation Items */}
           <nav className="flex items-center gap-1 sm:gap-1.5 p-1 bg-zinc-100/70 rounded-xl border border-zinc-200/50 overflow-x-auto max-w-[calc(100vw-120px)] sm:max-w-none">
             {navLinks.map((link) => {
-              const isActive = pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href));
+              const isActive =
+                link.href === '/'
+                  ? pathname === '/' || pathname === '/keuangan'
+                  : pathname === link.href || pathname.startsWith(link.href);
+
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
                     isActive
                       ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200/60 font-semibold'
                       : 'text-zinc-500 hover:text-zinc-900 hover:bg-white/50'
