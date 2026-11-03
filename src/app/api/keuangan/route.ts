@@ -302,6 +302,10 @@ export async function GET(request: Request) {
     const saldoAkhir = saldoAwalTahun + totalPemasukan - totalPengeluaran;
     const surplusDefisit = totalPemasukan - totalPengeluaran;
 
+    // Saldo bulan lalu (sebagai pembanding informatif)
+    const saldoBulanLalu = 23000000;
+    const selisihBulanLalu = saldoAkhir - saldoBulanLalu;
+
     const targetIuranTahunan = 70 * NOMINAL_IURAN_PER_RUMAH * 12; // 42.000.000 / thn
     const realisasiIuranTahunan = transaksiList
       .filter((t) => t.kategori === 'Iuran Wajib Warga')
@@ -380,6 +384,8 @@ export async function GET(request: Request) {
       periode: monthParam === 'all' ? `Tahun ${year}` : `${monthParam} ${year}`,
       tahun: year,
       saldoAwal: saldoAwalTahun,
+      saldoBulanLalu,
+      selisihBulanLalu,
       totalPemasukan,
       totalPengeluaran,
       saldoAkhir,

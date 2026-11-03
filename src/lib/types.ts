@@ -60,6 +60,8 @@ export interface RingkasanKeuangan {
   periode: string;
   tahun: number;
   saldoAwal: number;
+  saldoBulanLalu: number;
+  selisihBulanLalu: number;
   totalPemasukan: number;
   totalPengeluaran: number;
   saldoAkhir: number;
