@@ -10,6 +10,7 @@ export default function KeuanganDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [data, setData] = useState<RingkasanKeuangan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [copiedRekening, setCopiedRekening] = useState(false);
 
   // Ambil data keuangan
   const fetchKeuangan = useCallback(async (year: string, month: string) => {
@@ -38,6 +39,13 @@ export default function KeuanganDashboard() {
       currency: 'IDR',
       maximumFractionDigits: 0,
     }).format(val);
+  };
+
+  // Salin No Rekening
+  const handleCopyRekening = () => {
+    navigator.clipboard.writeText('8240-1928-3019');
+    setCopiedRekening(true);
+    setTimeout(() => setCopiedRekening(false), 2000);
   };
 
   // Filter transaksi
@@ -81,12 +89,12 @@ export default function KeuanganDashboard() {
     URL.revokeObjectURL(url);
   };
 
-  // Ekspor PDF Laporan Keuangan
+  // Ekspor PDF Laporan Keuangan Bento
   const handleExportPDF = async () => {
     const html2canvas = (await import('html2canvas')).default;
     const { jsPDF } = await import('jspdf');
 
-    const element = document.getElementById('laporan-keuangan-export');
+    const element = document.getElementById('bento-keuangan-container');
     if (!element) return;
 
     const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#FAFAFA' });
@@ -98,16 +106,16 @@ export default function KeuanganDashboard() {
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
     pdf.setFontSize(14);
-    pdf.text(`Laporan Keuangan Terbuka Kas RT 10 - Periode ${data?.periode || selectedYear}`, 8, 12);
+    pdf.text(`Laporan Keuangan Kas Terbuka RT 10 - ${data?.periode || selectedYear}`, 8, 12);
     pdf.setFontSize(8);
     pdf.setTextColor(100);
-    pdf.text(`Dokumen resmi transparansi kas warga. Dicetak pada: ${new Date().toLocaleDateString('id-ID', { dateStyle: 'full' })}`, 8, 17);
+    pdf.text(`Dokumen transparansi kas warga. Dicetak pada: ${new Date().toLocaleDateString('id-ID', { dateStyle: 'full' })}`, 8, 17);
     pdf.addImage(imgData, 'PNG', 8, 22, imgWidth, imgHeight);
     pdf.save(`Laporan_Keuangan_RT10_${selectedYear}_${selectedMonth}.pdf`);
   };
 
   const monthOptions = [
-    { val: 'all', label: 'Seluruh Bulan (Akumulatif)' },
+    { val: 'all', label: 'Semua Bulan (Kumulatif)' },
     { val: 'Jan', label: 'Januari' },
     { val: 'Feb', label: 'Februari' },
     { val: 'Mar', label: 'Maret' },
@@ -131,34 +139,42 @@ export default function KeuanganDashboard() {
     );
   }
 
+  // Hitung rasio pengeluaran
+  const rasioPengeluaran = data ? Math.round((data.totalPengeluaran / (data.totalPemasukan || 1)) * 100) : 0;
+  const sisaKasSurplus = data ? data.totalPemasukan - data.totalPengeluaran : 0;
+
   return (
-    <div className="space-y-8" id="laporan-keuangan-export">
-      {/* Header Banner Transparansi Publik */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-zinc-200/60">
+    <div className="space-y-6" id="bento-keuangan-container">
+      {/* Bento Top Header & Control Strip */}
+      <div className="bg-white rounded-3xl p-5 sm:p-6 border border-zinc-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-semibold mb-3 border border-emerald-200/60">
+          <div className="flex items-center gap-2 mb-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            Akses Publik Terbuka • Transparansi Kas Warga RT 10
+            <span className="text-[10px] font-bold tracking-wider uppercase text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/60">
+              Kas Terbuka 70 Hunian
+            </span>
+            <span className="text-zinc-300">•</span>
+            <span className="text-[11px] text-zinc-400 font-medium">Buku Kas Real-time</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-950">
-            Dashboard Laporan Keuangan Kas
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-950">
+            Laporan Keuangan Kas Warga RT 10
           </h1>
-          <p className="text-xs sm:text-sm text-zinc-500 mt-1 max-w-xl">
-            Laporan pertanggungjawaban kas kasbon, realisasi iuran bulanan 70 hunian, dan rekap mutasi belanja operasional lingkungan secara terbuka.
+          <p className="text-xs text-zinc-500 mt-0.5">
+            Transparansi saldo kas, kepatuhan iuran, dan rincian alokasi belanja operasional lingkungan.
           </p>
         </div>
 
-        {/* Filter Controls & Action Buttons */}
+        {/* Compact Controls */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Year Switcher */}
-          <div className="inline-flex items-center p-1 bg-white rounded-xl border border-zinc-200/80 shadow-xs text-xs">
+          {/* Year Pills */}
+          <div className="inline-flex items-center p-1 bg-zinc-100/80 rounded-2xl border border-zinc-200/60 text-xs">
             {['2024', '2025', '2026'].map((yr) => (
               <button
                 key={yr}
                 onClick={() => setSelectedYear(yr)}
-                className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
+                className={`px-3 py-1 rounded-xl font-semibold transition-all ${
                   selectedYear === yr
-                    ? 'bg-zinc-900 text-white shadow-xs'
+                    ? 'bg-white text-zinc-900 shadow-xs'
                     : 'text-zinc-500 hover:text-zinc-900'
                 }`}
               >
@@ -168,7 +184,7 @@ export default function KeuanganDashboard() {
           </div>
 
           {/* Month Selector */}
-          <div className="bg-white rounded-xl border border-zinc-200/80 shadow-xs px-2.5 py-1.5 text-xs">
+          <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-xs px-3 py-1.5 text-xs">
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
@@ -186,7 +202,7 @@ export default function KeuanganDashboard() {
           <button
             onClick={handleExportCSV}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-zinc-700 text-xs font-semibold
-                       rounded-xl border border-zinc-200 hover:bg-zinc-50 hover:text-zinc-900 transition-all shadow-xs"
+                       rounded-2xl border border-zinc-200 hover:bg-zinc-50 transition-all shadow-xs"
             title="Download CSV Buku Kas"
           >
             <svg className="w-3.5 h-3.5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -197,153 +213,180 @@ export default function KeuanganDashboard() {
 
           <button
             onClick={handleExportPDF}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 text-white text-xs font-semibold
-                       rounded-xl hover:bg-zinc-800 transition-all shadow-xs"
-            title="Download Dokumen PDF Laporan Keuangan"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-zinc-900 text-white text-xs font-semibold
+                       rounded-2xl hover:bg-zinc-800 transition-all shadow-xs"
+            title="Unduh Dokumen PDF Laporan"
           >
             <svg className="w-3.5 h-3.5 text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
             </svg>
-            <span>Unduh PDF</span>
+            <span>PDF</span>
           </button>
         </div>
       </div>
 
-      {/* Row 1: 4 Primary KPI Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Saldo Kas Bersih */}
-        <div className="bg-white rounded-2xl p-5 border border-zinc-200/80 shadow-xs hover:border-zinc-300 transition-all flex flex-col justify-between">
+      {/* ============================================================== */}
+      {/* BENTO GRID LEVEL 1: Financial Health Core (3 Bento Boxes)     */}
+      {/* ============================================================== */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+        {/* Bento 1: Saldo Kas Utama (Col Span 5) */}
+        <div className="md:col-span-5 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-900 text-white rounded-3xl p-6 shadow-sm border border-zinc-800/80 flex flex-col justify-between relative overflow-hidden group">
+          <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none group-hover:bg-emerald-500/20 transition-all"></div>
+          
           <div>
-            <div className="flex items-center justify-between text-xs text-zinc-400 font-medium uppercase tracking-wider mb-2">
-              <span>Saldo Akhir Kas</span>
-              <span className="p-1 rounded-md bg-zinc-100 text-zinc-700">
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                </svg>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 bg-white/10 px-2.5 py-1 rounded-full border border-white/10">
+                Saldo Kas Bersih
+              </span>
+              <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                Arus Kas Sehat
               </span>
             </div>
-            <div className="text-2xl font-bold tracking-tight text-zinc-950">
+            <div className="text-3xl sm:text-4xl font-extrabold tracking-tight font-mono text-white mt-1">
               {formatRupiah(data?.saldoAkhir || 0)}
             </div>
+            <p className="text-xs text-zinc-400 mt-1.5">
+              Net surplus kas berjalan:{' '}
+              <span className="text-emerald-400 font-semibold font-mono">
+                +{formatRupiah(data?.surplusDefisit || 0)}
+              </span>
+            </p>
           </div>
-          <div className="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-between text-[11px]">
-            <span className="text-emerald-700 font-semibold inline-flex items-center gap-1">
-              <span>↑</span> {formatRupiah(data?.surplusDefisit || 0)} surplus
-            </span>
-            <span className="text-zinc-400">Kas Aman</span>
+
+          <div className="mt-6 pt-4 border-t border-white/10 grid grid-cols-3 gap-2 text-[11px]">
+            <div>
+              <span className="text-zinc-500 block text-[10px]">Saldo Awal</span>
+              <span className="font-semibold text-zinc-300 font-mono">{formatRupiah(data?.saldoAwal || 0)}</span>
+            </div>
+            <div>
+              <span className="text-zinc-500 block text-[10px]">Penerimaan</span>
+              <span className="font-semibold text-emerald-400 font-mono">+{formatRupiah(data?.totalPemasukan || 0)}</span>
+            </div>
+            <div>
+              <span className="text-zinc-500 block text-[10px]">Belanja</span>
+              <span className="font-semibold text-rose-400 font-mono">-{formatRupiah(data?.totalPengeluaran || 0)}</span>
+            </div>
           </div>
         </div>
 
-        {/* Card 2: Total Penerimaan Kas */}
-        <div className="bg-white rounded-2xl p-5 border border-zinc-200/80 shadow-xs hover:border-zinc-300 transition-all flex flex-col justify-between">
+        {/* Bento 2: Arus Kas & Efisiensi Belanja (Col Span 4) */}
+        <div className="md:col-span-4 bg-white rounded-3xl p-6 border border-zinc-200/80 shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between text-xs text-emerald-700 font-medium uppercase tracking-wider mb-2">
-              <span>Total Pemasukan</span>
-              <span className="p-1 rounded-md bg-emerald-50 text-emerald-600">
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 11l5-5m0 0l5 5m-5-5v12" />
-                </svg>
-              </span>
+            <div className="flex items-center justify-between text-xs text-zinc-400 font-semibold uppercase tracking-wider mb-2">
+              <span>Rasio Pemasukan vs Belanja</span>
+              <span className="text-zinc-900 font-mono font-bold text-xs">{rasioPengeluaran}% Terpakai</span>
             </div>
-            <div className="text-2xl font-bold tracking-tight text-emerald-800">
-              {formatRupiah(data?.totalPemasukan || 0)}
+            
+            {/* Visual Dual Progress Bar */}
+            <div className="space-y-3 mt-3">
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="text-emerald-700 font-semibold flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    Total Masuk
+                  </span>
+                  <span className="font-bold text-zinc-900 font-mono">{formatRupiah(data?.totalPemasukan || 0)}</span>
+                </div>
+                <div className="w-full bg-emerald-100/60 h-2 rounded-full overflow-hidden">
+                  <div className="bg-emerald-500 h-2 rounded-full w-full"></div>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="text-rose-600 font-semibold flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                    Total Belanja
+                  </span>
+                  <span className="font-bold text-zinc-900 font-mono">{formatRupiah(data?.totalPengeluaran || 0)}</span>
+                </div>
+                <div className="w-full bg-zinc-100 h-2 rounded-full overflow-hidden">
+                  <div
+                    className="bg-rose-500 h-2 rounded-full transition-all duration-700"
+                    style={{ width: `${Math.min(rasioPengeluaran, 100)}%` }}
+                  ></div>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-between text-[11px]">
-            <span className="text-zinc-500">Iuran + Donasi Warga</span>
-            <span className="text-emerald-700 font-medium">100% Tercatat</span>
+
+          <div className="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-between text-[11px] text-zinc-500">
+            <span>Sisa Kas Belum Terpakai:</span>
+            <span className="font-bold font-mono text-zinc-900">{formatRupiah(sisaKasSurplus)}</span>
           </div>
         </div>
 
-        {/* Card 3: Total Pengeluaran */}
-        <div className="bg-white rounded-2xl p-5 border border-zinc-200/80 shadow-xs hover:border-zinc-300 transition-all flex flex-col justify-between">
+        {/* Bento 3: Kepatuhan 70 Hunian (Col Span 3) */}
+        <div className="md:col-span-3 bg-white rounded-3xl p-6 border border-zinc-200/80 shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between text-xs text-rose-600 font-medium uppercase tracking-wider mb-2">
-              <span>Realisasi Belanja</span>
-              <span className="p-1 rounded-md bg-rose-50 text-rose-600">
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 13l-5 5m0 0l-5-5m5 5V6" />
-                </svg>
+            <div className="flex items-center justify-between text-xs text-zinc-400 font-semibold uppercase tracking-wider mb-2">
+              <span>Kepatuhan 70 Rumah</span>
+              <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/50 text-[10px]">
+                {data?.persenKepatuhan || 0}% Lunas
               </span>
             </div>
-            <div className="text-2xl font-bold tracking-tight text-rose-700">
-              {formatRupiah(data?.totalPengeluaran || 0)}
-            </div>
-          </div>
-          <div className="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-between text-[11px]">
-            <span className="text-zinc-500">
-              Rasio Belanja:{' '}
-              {data ? Math.round((data.totalPengeluaran / (data.totalPemasukan || 1)) * 100) : 0}%
-            </span>
-            <span className="text-zinc-400">Efisiensi Tinggi</span>
-          </div>
-        </div>
 
-        {/* Card 4: Kepatuhan Iuran */}
-        <div className="bg-white rounded-2xl p-5 border border-zinc-200/80 shadow-xs hover:border-zinc-300 transition-all flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between text-xs text-zinc-500 font-medium uppercase tracking-wider mb-2">
-              <span>Tingkat Kepatuhan Warga</span>
-              <span className="p-1 rounded-md bg-zinc-100 text-zinc-700">
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-3xl font-extrabold tracking-tight text-zinc-950 font-mono">
+                {data ? Math.round((data.persenKepatuhan * 70) / 100) : 0}
               </span>
+              <span className="text-xs text-zinc-400 font-medium">/ 70 Hunian Lunas</span>
             </div>
-            <div className="flex items-baseline justify-between">
-              <span className="text-2xl font-bold tracking-tight text-zinc-950">
-                {data?.persenKepatuhan || 0}%
-              </span>
-              <span className="text-xs text-zinc-500 font-medium">70 Hunian</span>
-            </div>
-          </div>
-          <div className="mt-4 pt-3 border-t border-zinc-100">
-            <div className="w-full bg-zinc-100 h-1.5 rounded-full overflow-hidden">
+
+            <div className="w-full bg-zinc-100 h-2 rounded-full overflow-hidden mt-3">
               <div
-                className="bg-emerald-500 h-1.5 rounded-full transition-all duration-700"
+                className="bg-zinc-900 h-2 rounded-full transition-all duration-700"
                 style={{ width: `${data?.persenKepatuhan || 0}%` }}
-              />
+              ></div>
             </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-between text-[11px] text-zinc-500">
+            <span>Tarif Iuran:</span>
+            <span className="font-bold text-zinc-900">Rp 50.000 / bln</span>
           </div>
         </div>
       </div>
 
-      {/* Row 2: Dua Kartu Alokasi Anggaran (Card Breakdown) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Card A: Pos Alokasi Pengeluaran */}
-        <div className="bg-white rounded-2xl p-6 border border-zinc-200/80 shadow-xs space-y-5">
-          <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+      {/* ============================================================== */}
+      {/* BENTO GRID LEVEL 2: Alokasi Belanja & Rekening Kas (2 Bento)    */}
+      {/* ============================================================== */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+        {/* Bento 4: Alokasi Belanja Rutin Lingkungan (Col Span 7) */}
+        <div className="md:col-span-7 bg-white rounded-3xl p-6 border border-zinc-200/80 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between border-b border-zinc-100 pb-3 mb-4">
             <div>
-              <h2 className="text-sm font-bold text-zinc-900 tracking-tight">
-                Pos Alokasi Pengeluaran Kas
+              <h2 className="text-sm font-bold text-zinc-900 tracking-tight flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                Pos Alokasi Belanja Lingkungan
               </h2>
               <p className="text-[11px] text-zinc-400 mt-0.5">
-                Rincian belanja rutin, honor satpam, kebersihan, dan pemeliharaan lingkungan
+                Rincian belanja operasional rutin satpam, kebersihan parit, dan fasilitas umum
               </p>
             </div>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-zinc-100 text-zinc-700 font-mono">
+            <span className="text-xs font-bold font-mono text-zinc-900 bg-zinc-100 px-2.5 py-1 rounded-xl">
               {formatRupiah(data?.totalPengeluaran || 0)}
             </span>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3.5">
             {data?.alokasiPengeluaran.map((item) => (
-              <div key={item.kategori} className="space-y-1.5">
+              <div key={item.kategori} className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
                     <span
-                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      className="w-2 h-2 rounded-full shrink-0"
                       style={{ backgroundColor: item.warna }}
                     />
-                    <span className="font-semibold text-zinc-800">{item.kategori}</span>
+                    <span className="font-medium text-zinc-800">{item.kategori}</span>
                   </div>
                   <div className="flex items-center gap-2 text-[11px]">
-                    <span className="font-bold text-zinc-900">{formatRupiah(item.nominal)}</span>
-                    <span className="text-zinc-400 font-mono">({item.persentase}%)</span>
+                    <span className="font-bold text-zinc-900 font-mono">{formatRupiah(item.nominal)}</span>
+                    <span className="text-zinc-400 font-mono text-[10px]">({item.persentase}%)</span>
                   </div>
                 </div>
 
-                {/* Progress bar */}
                 <div className="w-full bg-zinc-100 h-1.5 rounded-full overflow-hidden">
                   <div
                     className="h-1.5 rounded-full transition-all duration-500"
@@ -353,203 +396,203 @@ export default function KeuanganDashboard() {
                     }}
                   />
                 </div>
-                <p className="text-[10px] text-zinc-400 pl-4">{item.deskripsi}</p>
               </div>
             ))}
           </div>
+
+          <div className="mt-4 pt-3 border-t border-zinc-100 text-[11px] text-zinc-400 flex items-center justify-between">
+            <span>Audit rutin oleh Sie Sarpras & Keamanan RT</span>
+            <span>5 Pos Pengeluaran</span>
+          </div>
         </div>
 
-        {/* Card B: Sumber Penerimaan Kas */}
-        <div className="bg-white rounded-2xl p-6 border border-zinc-200/80 shadow-xs space-y-5 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
-              <div>
-                <h2 className="text-sm font-bold text-zinc-900 tracking-tight">
-                  Komposisi Sumber Pemasukan
-                </h2>
-                <p className="text-[11px] text-zinc-400 mt-0.5">
-                  Asal penerimaan kas dari iuran wajib bulanan dan partisipasi sukarela warga
-                </p>
-              </div>
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 font-mono">
-                {formatRupiah(data?.totalPemasukan || 0)}
+        {/* Bento 5: Rekening Kas Resmi & Sumber Dana (Col Span 5) */}
+        <div className="md:col-span-5 flex flex-col gap-4">
+          {/* Sub-Bento A: Virtual Account / Rekening Resmi */}
+          <div className="bg-zinc-950 text-white rounded-3xl p-5 shadow-xs border border-zinc-800/80 flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+                Rekening Kas Resmi RT 10
+              </span>
+              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                BCA
               </span>
             </div>
 
-            <div className="space-y-4 mt-5">
-              {data?.alokasiPemasukan.map((item) => (
-                <div key={item.kategori} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{ backgroundColor: item.warna }}
-                      />
-                      <span className="font-semibold text-zinc-800">{item.kategori}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-[11px]">
-                      <span className="font-bold text-emerald-800">{formatRupiah(item.nominal)}</span>
-                      <span className="text-zinc-400 font-mono">({item.persentase}%)</span>
-                    </div>
-                  </div>
+            <div className="my-2 flex items-center justify-between">
+              <div>
+                <p className="text-xl font-mono font-bold tracking-wider text-white">8240-1928-3019</p>
+                <p className="text-xs text-zinc-400 mt-0.5">a.n. <strong className="text-zinc-200">KAS PAGUYUBAN RT 10</strong></p>
+              </div>
+              <button
+                onClick={handleCopyRekening}
+                className="px-3 py-1.5 bg-white/10 hover:bg-white/20 active:bg-white/30 text-white text-xs font-semibold rounded-xl transition-all border border-white/10 shrink-0"
+              >
+                {copiedRekening ? '✓ Tersalin' : 'Salin Rekening'}
+              </button>
+            </div>
 
+            <p className="text-[10px] text-zinc-400 pt-2 border-t border-white/10">
+              Cantumkan keterangan: <strong>[No. Blok - Nama]</strong> saat transfer iuran.
+            </p>
+          </div>
+
+          {/* Sub-Bento B: Komposisi Sumber Dana */}
+          <div className="bg-white rounded-3xl p-5 border border-zinc-200/80 shadow-xs flex-1 flex flex-col justify-between">
+            <div className="flex items-center justify-between border-b border-zinc-100 pb-2 mb-3">
+              <span className="text-xs font-bold text-zinc-900">Sumber Pemasukan Kas</span>
+              <span className="text-[11px] font-mono font-bold text-emerald-700">{formatRupiah(data?.totalPemasukan || 0)}</span>
+            </div>
+
+            <div className="space-y-3">
+              {data?.alokasiPemasukan.map((item) => (
+                <div key={item.kategori} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-zinc-700 font-medium">{item.kategori}</span>
+                    <span className="font-bold text-emerald-800 font-mono text-[11px]">{formatRupiah(item.nominal)}</span>
+                  </div>
                   <div className="w-full bg-zinc-100 h-1.5 rounded-full overflow-hidden">
                     <div
                       className="h-1.5 rounded-full transition-all duration-500"
-                      style={{
-                        width: `${item.persentase}%`,
-                        backgroundColor: item.warna,
-                      }}
+                      style={{ width: `${item.persentase}%`, backgroundColor: item.warna }}
                     />
                   </div>
-                  <p className="text-[10px] text-zinc-400 pl-4">{item.deskripsi}</p>
                 </div>
               ))}
             </div>
-          </div>
 
-          {/* Mini Transparency Note */}
-          <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200/60 mt-4 text-xs text-zinc-600 space-y-1">
-            <div className="flex items-center gap-2 font-semibold text-zinc-900">
-              <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span>Ketentuan Iuran Kas Warga RT 10</span>
-            </div>
-            <p className="text-[11px] text-zinc-500 leading-relaxed">
-              Iuran rutin ditetapkan sebesar <strong>Rp 50.000 / rumah / bulan</strong>, dibayarkan selambatnya tanggal 10 tiap bulan untuk kelancaran honor satpam malam dan operasional pemeliharaan lingkungan.
+            <p className="text-[10px] text-zinc-400 pt-2 mt-2 border-t border-zinc-100">
+              Iuran wajib 70 rumah @ Rp 50.000 / bln + donatur sukarela
             </p>
           </div>
         </div>
       </div>
 
-      {/* Row 3: Card Monitoring Kepatuhan Pembayaran Per Blok (7 Blok Hunian) */}
-      <div className="bg-white rounded-2xl p-6 border border-zinc-200/80 shadow-xs space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-100 pb-3">
-          <div>
-            <h2 className="text-sm font-bold text-zinc-900 tracking-tight">
-              Monitoring Kepatuhan Iuran Berdasarkan Blok (70 Rumah)
-            </h2>
-            <p className="text-[11px] text-zinc-400 mt-0.5">
-              Sebaran realisasi pembayaran kas warga per cluster hunian Blok A sampai dengan Blok G
-            </p>
+      {/* ============================================================== */}
+      {/* BENTO GRID LEVEL 3: Blok Hunian & Mini Scrollable Ledger        */}
+      {/* ============================================================== */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+        {/* Bento 6: Sebaran 7 Blok Hunian A s/d G (Col Span 5) */}
+        <div className="md:col-span-5 bg-white rounded-3xl p-6 border border-zinc-200/80 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between border-b border-zinc-100 pb-3 mb-3">
+            <div>
+              <h2 className="text-sm font-bold text-zinc-900 tracking-tight flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                Kepatuhan Per Blok (70 Rumah)
+              </h2>
+              <p className="text-[11px] text-zinc-400 mt-0.5">
+                Monitoring ketercapaian kas per klaster hunian A s/d G
+              </p>
+            </div>
+            <span className="text-[10px] text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-md font-mono">
+              7 Blok
+            </span>
           </div>
-          <span className="text-xs text-zinc-500 bg-zinc-50 px-3 py-1 rounded-lg border border-zinc-200/50">
-            Total Target: 70 Rumah
-          </span>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.5">
-          {data?.performaBlok.map((b) => {
-            const isTertib = b.persentase >= 80;
-            return (
-              <div
-                key={b.blok}
-                className="p-4 rounded-xl border border-zinc-200/70 bg-zinc-50/50 hover:bg-white hover:shadow-xs transition-all flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-bold text-xs text-zinc-900">{b.blok}</span>
+          {/* Compact Grid List of 7 Blocks */}
+          <div className="space-y-2.5">
+            {data?.performaBlok.map((b) => {
+              const isTertib = b.persentase >= 80;
+              return (
+                <div
+                  key={b.blok}
+                  className="p-2.5 rounded-2xl bg-zinc-50/70 border border-zinc-100 hover:bg-white hover:border-zinc-200 transition-all flex items-center justify-between gap-3 text-xs"
+                >
+                  <div className="w-16 font-bold text-zinc-900 shrink-0 font-mono">
+                    {b.blok}
+                  </div>
+
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between text-[11px] mb-1">
+                      <span className="text-zinc-500">
+                        {b.lunas}/{b.totalRumah} rumah
+                      </span>
+                      <span className="font-bold text-zinc-900 font-mono">{b.persentase}%</span>
+                    </div>
+                    <div className="w-full bg-zinc-200/80 h-1 rounded-full overflow-hidden">
+                      <div
+                        className={`h-1 rounded-full transition-all duration-500 ${
+                          isTertib ? 'bg-emerald-500' : 'bg-amber-500'
+                        }`}
+                        style={{ width: `${b.persentase}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="shrink-0 text-right">
                     <span
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                      className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${
                         isTertib
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : 'bg-amber-50 text-amber-700 border-amber-200'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200/60'
+                          : 'bg-amber-50 text-amber-700 border-amber-200/60'
                       }`}
                     >
                       {isTertib ? 'Tertib' : 'Sebagian'}
                     </span>
                   </div>
-                  <div className="flex items-baseline justify-between text-xs mt-1">
-                    <span className="text-zinc-500 text-[11px]">Lunas:</span>
-                    <span className="font-bold text-zinc-900">
-                      {b.lunas} / {b.totalRumah} rumah
-                    </span>
-                  </div>
-                  <div className="flex items-baseline justify-between text-xs mt-0.5">
-                    <span className="text-zinc-500 text-[11px]">Terkumpul:</span>
-                    <span className="font-semibold text-emerald-700 text-[11px]">
-                      {formatRupiah(b.nominalTerkumpul)}
-                    </span>
-                  </div>
                 </div>
-
-                <div className="mt-3">
-                  <div className="flex items-center justify-between text-[10px] text-zinc-400 mb-1">
-                    <span>Realisasi</span>
-                    <span className="font-bold text-zinc-700">{b.persentase}%</span>
-                  </div>
-                  <div className="w-full bg-zinc-200 h-1.5 rounded-full overflow-hidden">
-                    <div
-                      className={`h-1.5 rounded-full transition-all duration-500 ${
-                        isTertib ? 'bg-emerald-500' : 'bg-amber-500'
-                      }`}
-                      style={{ width: `${b.persentase}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Row 4: Card Buku Kas / Catatan Mutasi Terbuka (Public Ledger Card) */}
-      <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-xs overflow-hidden space-y-4 p-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-100 pb-4">
-          <div>
-            <h2 className="text-sm font-bold text-zinc-900 tracking-tight">
-              Buku Kas & Catatan Mutasi Terbuka (Public Ledger)
-            </h2>
-            <p className="text-[11px] text-zinc-400 mt-0.5">
-              Seluruh riwayat arus kas masuk dan pengeluaran belanja lingkungan dapat diperiksa oleh siapapun
-            </p>
+              );
+            })}
           </div>
 
-          {/* Filter Tab & Search Bar */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-            {/* Filter Tabs */}
-            <div className="flex items-center gap-1 p-0.5 bg-zinc-100/70 rounded-xl border border-zinc-200/60 text-xs">
-              <button
-                onClick={() => setActiveTab('semua')}
-                className={`px-3 py-1 rounded-lg font-medium transition-all ${
-                  activeTab === 'semua'
-                    ? 'bg-white text-zinc-900 shadow-xs'
-                    : 'text-zinc-500 hover:text-zinc-900'
-                }`}
-              >
-                Semua
-              </button>
-              <button
-                onClick={() => setActiveTab('masuk')}
-                className={`px-3 py-1 rounded-lg font-medium transition-all ${
-                  activeTab === 'masuk'
-                    ? 'bg-white text-emerald-700 shadow-xs'
-                    : 'text-zinc-500 hover:text-zinc-900'
-                }`}
-              >
-                Masuk (+)
-              </button>
-              <button
-                onClick={() => setActiveTab('keluar')}
-                className={`px-3 py-1 rounded-lg font-medium transition-all ${
-                  activeTab === 'keluar'
-                    ? 'bg-white text-rose-700 shadow-xs'
-                    : 'text-zinc-500 hover:text-zinc-900'
-                }`}
-              >
-                Keluar (-)
-              </button>
+          <div className="mt-3 pt-2 border-t border-zinc-100 flex items-center justify-between text-[10px] text-zinc-400">
+            <span>Target: 70 Hunian</span>
+            <span>Update Tiap Awal Bulan</span>
+          </div>
+        </div>
+
+        {/* Bento 7: Buku Kas & Catatan Mutasi Terbuka (Col Span 7)          */}
+        {/* Menggunakan container scrollable (max-h) agar tidak panjang ke bawah */}
+        <div className="md:col-span-7 bg-white rounded-3xl p-6 border border-zinc-200/80 shadow-xs flex flex-col justify-between">
+          <div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-100 pb-3 mb-3">
+              <div>
+                <h2 className="text-sm font-bold text-zinc-900 tracking-tight flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  Buku Kas & Mutasi Terbuka
+                </h2>
+                <p className="text-[11px] text-zinc-400 mt-0.5">
+                  Daftar transaksi kas masuk dan pengeluaran yang dapat diaudit siapapun
+                </p>
+              </div>
+
+              {/* Mini Filter Tabs */}
+              <div className="flex items-center gap-1 p-0.5 bg-zinc-100 rounded-xl text-xs">
+                <button
+                  onClick={() => setActiveTab('semua')}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+                    activeTab === 'semua' ? 'bg-white text-zinc-900 shadow-xs' : 'text-zinc-500'
+                  }`}
+                >
+                  Semua
+                </button>
+                <button
+                  onClick={() => setActiveTab('masuk')}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+                    activeTab === 'masuk' ? 'bg-white text-emerald-700 shadow-xs' : 'text-zinc-500'
+                  }`}
+                >
+                  Masuk (+)
+                </button>
+                <button
+                  onClick={() => setActiveTab('keluar')}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+                    activeTab === 'keluar' ? 'bg-white text-rose-700 shadow-xs' : 'text-zinc-500'
+                  }`}
+                >
+                  Keluar (-)
+                </button>
+              </div>
             </div>
 
-            {/* Live Search Box */}
-            <div className="relative">
+            {/* Search Input */}
+            <div className="relative mb-3">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Cari transaksi / kwitansi..."
-                className="pl-8 pr-3 py-1.5 text-xs text-zinc-900 bg-zinc-50 border border-zinc-200/70 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all placeholder:text-zinc-400 w-full sm:w-52"
+                placeholder="Cari transaksi, kwitansi, atau keperluan..."
+                className="w-full pl-8 pr-3 py-1.5 text-xs text-zinc-900 bg-zinc-50 border border-zinc-200/80 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all placeholder:text-zinc-400"
               />
               <svg
                 className="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-2.5"
@@ -560,114 +603,54 @@ export default function KeuanganDashboard() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
-          </div>
-        </div>
 
-        {/* Mutasi Table */}
-        <div className="overflow-x-auto -mx-6">
-          <table className="w-full text-left border-collapse min-w-[700px]">
-            <thead>
-              <tr className="border-b border-zinc-200/70 bg-zinc-50/70 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
-                <th className="py-3 px-6">Tanggal / No Bukti</th>
-                <th className="py-3 px-4">Kategori Pos</th>
-                <th className="py-3 px-4">Rincian & Keterangan Belanja</th>
-                <th className="py-3 px-4 text-right">Nominal</th>
-                <th className="py-3 px-4 text-right">Saldo Kas</th>
-                <th className="py-3 px-6 text-right">Verifikator</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100 text-xs">
+            {/* Scrollable Mini Table Container (Max height controlled to prevent long page) */}
+            <div className="overflow-y-auto max-h-[300px] border border-zinc-100 rounded-2xl divide-y divide-zinc-100 pr-1">
               {filteredTransaksi.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-12 text-center text-zinc-400">
-                    Tidak ada transaksi kas yang sesuai dengan kriteria filter.
-                  </td>
-                </tr>
+                <div className="py-12 text-center text-xs text-zinc-400">
+                  Tidak ada transaksi kas yang sesuai filter.
+                </div>
               ) : (
                 filteredTransaksi.map((item) => {
                   const isMasuk = item.tipe === 'masuk';
                   return (
-                    <tr key={item.id} className="hover:bg-zinc-50/70 transition-colors">
-                      <td className="py-3.5 px-6 whitespace-nowrap">
-                        <div className="font-semibold text-zinc-900">{item.tanggal}</div>
-                        <div className="text-[10px] text-zinc-400 font-mono mt-0.5">
-                          {item.noBukti || item.id}
+                    <div
+                      key={item.id}
+                      className="p-3 hover:bg-zinc-50/70 transition-colors flex items-center justify-between gap-3 text-xs"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-[10px] text-zinc-400 font-mono">{item.tanggal}</span>
+                          <span className="text-[9px] font-semibold px-2 py-0.2 rounded-full bg-zinc-100 text-zinc-700">
+                            {item.kategori}
+                          </span>
                         </div>
-                      </td>
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-zinc-100 text-zinc-700 border border-zinc-200/50">
-                          {item.kategori}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-zinc-800 max-w-xs">
-                        <div className="line-clamp-2 leading-relaxed">{item.keterangan}</div>
-                      </td>
-                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                        <span
-                          className={`font-bold font-mono text-xs ${
+                        <p className="font-medium text-zinc-900 truncate text-[12px]">{item.keterangan}</p>
+                        <p className="text-[10px] text-zinc-400">{item.penanggungJawab} • {item.noBukti || item.id}</p>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <div
+                          className={`font-mono font-bold text-xs ${
                             isMasuk ? 'text-emerald-700' : 'text-rose-700'
                           }`}
                         >
                           {isMasuk ? '+' : '-'} {formatRupiah(item.nominal)}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-right whitespace-nowrap font-mono text-zinc-600 text-[11px]">
-                        {formatRupiah(item.saldoSetelah)}
-                      </td>
-                      <td className="py-3.5 px-6 text-right whitespace-nowrap text-zinc-500 text-[11px]">
-                        {item.penanggungJawab}
-                      </td>
-                    </tr>
+                        </div>
+                        <div className="text-[10px] text-zinc-400 font-mono mt-0.5">
+                          Saldo: {formatRupiah(item.saldoSetelah)}
+                        </div>
+                      </div>
+                    </div>
                   );
                 })
               )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Table Footer */}
-        <div className="pt-2 flex items-center justify-between text-[11px] text-zinc-400 border-t border-zinc-100">
-          <span>Menampilkan {filteredTransaksi.length} catatan mutasi kas</span>
-          <span>Buku Kas Terbuka RT 10</span>
-        </div>
-      </div>
-
-      {/* Row 5: Rekening Resmi Kas RT & Informasi Bendahara */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div className="p-5 rounded-2xl bg-zinc-900 text-white shadow-xs space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] uppercase font-bold tracking-widest text-zinc-400">
-              Rekening Resmi Kas RT
-            </span>
-            <span className="px-2 py-0.5 rounded-md bg-zinc-800 text-emerald-400 text-[10px] font-semibold">
-              BCA / Virtual Account
-            </span>
-          </div>
-          <div>
-            <p className="text-xl font-mono font-bold tracking-wider">8240-1928-3019</p>
-            <p className="text-xs text-zinc-400 mt-1">Atas Nama: <strong>KAS PAGUYUBAN RT 10</strong></p>
-          </div>
-          <p className="text-[11px] text-zinc-400 leading-relaxed pt-2 border-t border-zinc-800">
-            Warga yang membayar secara transfer dimohon mencantumkan berita transfer berupa <strong>[Blok Rumah - Nama]</strong> untuk memudahkan rekonsiliasi bendahara.
-          </p>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-white border border-zinc-200/80 shadow-xs space-y-3 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between text-xs text-zinc-400 mb-1">
-              <span className="font-semibold uppercase tracking-wider">Verifikasi & Konfirmasi</span>
-              <span className="text-emerald-600 font-medium">Buku Kas Terbuka</span>
             </div>
-            <h3 className="font-bold text-sm text-zinc-900">
-              Pertanyaan atau Bukti Transfer Kwitansi
-            </h3>
-            <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
-              Jika terdapat ketidaksesuaian pencatatan atau warga ingin meminta salinan kwitansi resmi, silakan hubungi Bendahara RT atau kirim aspirasi melalui form aduan.
-            </p>
           </div>
-          <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-xs">
-            <span className="text-zinc-600 font-medium">Bendahara RT 10</span>
-            <span className="text-zinc-400 text-[11px]">Audit Bulanan Tiap Tanggal 28</span>
+
+          <div className="mt-3 pt-2 border-t border-zinc-100 flex items-center justify-between text-[11px] text-zinc-400">
+            <span>Menampilkan {filteredTransaksi.length} catatan mutasi kas</span>
+            <span>Scroll untuk melihat histori transaksi</span>
           </div>
         </div>
       </div>
