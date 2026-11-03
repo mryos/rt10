@@ -245,20 +245,20 @@ export default function KeuanganDashboard() {
       </div>
 
       {/* ============================================================== */}
-      {/* BENTO GRID LEVEL 1: Financial Health Core (3 Bento Boxes)     */}
+      {/* BENTO GRID LEVEL 1: Financial Health Core (Rincian Kas 3 Bulan) */}
       {/* ============================================================== */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
-        {/* Bento 1: Saldo Kas Utama & Perbandingan Bulan Lalu (Col Span 5) */}
-        <div className="md:col-span-5 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-900 text-white rounded-3xl p-6 sm:p-7 shadow-sm border border-zinc-800/80 flex flex-col justify-between relative overflow-hidden group">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Bento 1: Saldo Kas Utama & Rincian Histori 3 Bulan (Col Span 7) */}
+        <div className="lg:col-span-7 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-900 text-white rounded-3xl p-6 sm:p-7 shadow-sm border border-zinc-800/80 flex flex-col justify-between relative overflow-hidden group">
           <div className="absolute -right-6 -bottom-6 w-36 h-36 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none group-hover:bg-emerald-500/20 transition-all"></div>
           
           <div>
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold uppercase tracking-wider text-zinc-400 bg-white/10 px-3 py-1 rounded-full border border-white/10">
-                Saldo Kas Saat Ini
+                Saldo Kas Saat Ini (Bulan Berjalan)
               </span>
               <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
-                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 Kas Sehat
               </span>
             </div>
@@ -267,132 +267,227 @@ export default function KeuanganDashboard() {
             <div className="text-3xl sm:text-5xl font-black tracking-tight font-mono text-white mt-1">
               {formatRupiah(data?.saldoAkhir || 0)}
             </div>
+            <p className="text-xs text-zinc-400 mt-1 font-medium">
+              Posisi kas riil warga RT 10 terverifikasi buku kas kasbon per periode berjalan.
+            </p>
 
-            {/* Perbandingan Informatif: Saldo Bulan Lalu */}
-            <div className="mt-4 p-4 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-between gap-3">
-              <div>
-                <span className="text-xs text-zinc-400 font-medium block">
-                  Saldo Kas Bulan Lalu
-                </span>
-                <span className="text-lg sm:text-xl font-extrabold font-mono text-zinc-100">
-                  {formatRupiah(saldoBulanLalu)}
-                </span>
-              </div>
-              <div className="text-right shrink-0">
-                <span className="text-xs sm:text-sm font-extrabold text-emerald-300 bg-emerald-500/20 px-3 py-1 rounded-xl border border-emerald-400/30 inline-flex items-center gap-1 font-mono">
-                  <span>↑</span> +{formatRupiah(selisihBulanLalu)}
-                </span>
-                <span className="text-xs text-zinc-400 block mt-1 font-medium">
-                  (+{persentaseKenaikan}% Surplus)
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Sub-metrik kas yang rapi & berbobot (mencegah teks terpotong/wrap) */}
-          <div className="mt-5 pt-4 border-t border-white/10 grid grid-cols-3 gap-2 sm:gap-2.5">
-            <div className="bg-white/[0.06] rounded-2xl p-2.5 sm:p-3 border border-white/10 flex flex-col justify-between">
-              <span className="text-zinc-400 block text-[11px] sm:text-xs font-semibold mb-1">Saldo Awal</span>
-              <span className="font-bold text-zinc-100 font-mono text-xs sm:text-sm whitespace-nowrap block tracking-tight">
-                {formatRupiah(data?.saldoAwal || 0)}
-              </span>
-            </div>
-
-            <div className="bg-white/[0.06] rounded-2xl p-2.5 sm:p-3 border border-white/10 flex flex-col justify-between">
-              <span className="text-emerald-400 block text-[11px] sm:text-xs font-semibold mb-1">Total Masuk</span>
-              <span className="font-bold text-emerald-300 font-mono text-xs sm:text-sm whitespace-nowrap block tracking-tight">
-                +{formatRupiah(data?.totalPemasukan || 0)}
-              </span>
-            </div>
-
-            <div className="bg-white/[0.06] rounded-2xl p-2.5 sm:p-3 border border-white/10 flex flex-col justify-between">
-              <span className="text-rose-400 block text-[11px] sm:text-xs font-semibold mb-1">Total Keluar</span>
-              <span className="font-bold text-rose-300 font-mono text-xs sm:text-sm whitespace-nowrap block tracking-tight">
-                −{formatRupiah(data?.totalPengeluaran || 0)}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Bento 2: Arus Kas & Efisiensi Belanja (Col Span 4) */}
-        <div className="md:col-span-4 bg-white rounded-3xl p-6 sm:p-7 border border-zinc-200/80 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between text-xs sm:text-sm text-zinc-500 font-bold uppercase tracking-wider mb-2">
-              <span>Arus Masuk vs Belanja</span>
-              <span className="text-zinc-950 font-mono font-extrabold text-sm">{rasioPengeluaran}% Terpakai</span>
-            </div>
-            
-            {/* Visual Dual Progress Bar */}
-            <div className="space-y-4 mt-4">
-              <div>
-                <div className="flex items-center justify-between text-sm mb-1.5">
-                  <span className="text-emerald-800 font-bold flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                    Total Penerimaan
-                  </span>
-                  <span className="font-extrabold text-zinc-950 font-mono text-sm sm:text-base whitespace-nowrap">
-                    {formatRupiah(data?.totalPemasukan || 0)}
+            {/* Rincian Pergerakan Kas (2 Bulan Lalu s/d Bulan Berjalan Saat Ini) */}
+            <div className="mt-5 pt-4 border-t border-white/10">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="text-xs font-bold text-zinc-200 uppercase tracking-wider">
+                    Rincian Saldo (2 Bulan Lalu s/d Saat Ini)
                   </span>
                 </div>
-                <div className="w-full bg-emerald-100/70 h-2.5 rounded-full overflow-hidden">
-                  <div className="bg-emerald-500 h-2.5 rounded-full w-full"></div>
-                </div>
+                <span className="text-[11px] text-zinc-400 font-medium hidden sm:inline">Mutasi Kas Riil</span>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between text-sm mb-1.5">
-                  <span className="text-rose-700 font-bold flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-                    Total Pengeluaran
-                  </span>
-                  <span className="font-extrabold text-zinc-950 font-mono text-sm sm:text-base whitespace-nowrap">
-                    {formatRupiah(data?.totalPengeluaran || 0)}
-                  </span>
-                </div>
-                <div className="w-full bg-zinc-100 h-2.5 rounded-full overflow-hidden">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {(data?.riwayatSaldo && data.riwayatSaldo.length > 0
+                  ? data.riwayatSaldo
+                  : [
+                      {
+                        periode: 'September 2024',
+                        namaBulan: 'Sep 2024',
+                        label: '2 Bulan Lalu',
+                        saldoAwal: 20320000,
+                        pemasukan: 3100000,
+                        pengeluaran: 0,
+                        saldoAkhir: 23420000,
+                        selisih: 3100000,
+                        isBerjalan: false,
+                      },
+                      {
+                        periode: 'Oktober 2024',
+                        namaBulan: 'Okt 2024',
+                        label: '1 Bulan Lalu',
+                        saldoAwal: 23420000,
+                        pemasukan: 0,
+                        pengeluaran: 420000,
+                        saldoAkhir: 23000000,
+                        selisih: -420000,
+                        isBerjalan: false,
+                      },
+                      {
+                        periode: 'November 2024',
+                        namaBulan: 'Nov 2024',
+                        label: 'Saat Ini',
+                        saldoAwal: 23000000,
+                        pemasukan: 3150000,
+                        pengeluaran: 0,
+                        saldoAkhir: 26150000,
+                        selisih: 3150000,
+                        isBerjalan: true,
+                      },
+                    ]
+                ).map((item) => (
                   <div
-                    className="bg-rose-500 h-2.5 rounded-full transition-all duration-700"
-                    style={{ width: `${Math.min(rasioPengeluaran, 100)}%` }}
-                  ></div>
-                </div>
+                    key={item.periode}
+                    className={`rounded-2xl p-3 border transition-all flex flex-col justify-between ${
+                      item.isBerjalan
+                        ? 'bg-emerald-500/10 border-emerald-500/30 ring-1 ring-emerald-500/20 hover:bg-emerald-500/15'
+                        : 'bg-white/5 border-white/10 hover:bg-white/[0.08]'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between text-[11px] mb-1.5">
+                        <span className={`font-semibold ${item.isBerjalan ? 'text-emerald-300 flex items-center gap-1.5' : 'text-zinc-400'}`}>
+                          {item.isBerjalan && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>}
+                          {item.label}
+                        </span>
+                        <span className={`font-mono text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                          item.isBerjalan ? 'bg-emerald-500/20 text-emerald-200' : 'bg-white/10 text-zinc-300'
+                        }`}>
+                          {item.namaBulan}
+                        </span>
+                      </div>
+                      <div className={`text-base sm:text-lg font-black font-mono whitespace-nowrap ${item.isBerjalan ? 'text-white' : 'text-zinc-100'}`}>
+                        {formatRupiah(item.saldoAkhir)}
+                      </div>
+                    </div>
+                    <div className={`mt-2.5 pt-2 border-t text-[11px] space-y-1 ${item.isBerjalan ? 'border-emerald-500/25' : 'border-white/10'}`}>
+                      <div className="flex justify-between items-center text-zinc-300">
+                        <span className="text-zinc-400">Masuk:</span>
+                        <span className="text-emerald-300 font-mono font-bold whitespace-nowrap">
+                          {item.pemasukan > 0 ? `+${formatRupiah(item.pemasukan)}` : 'Rp 0'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-zinc-300">
+                        <span className="text-zinc-400">
+                          {item.isBerjalan ? 'Surplus:' : item.pengeluaran > 0 ? 'Keluar:' : 'Keluar:'}
+                        </span>
+                        <span className={`font-mono font-bold whitespace-nowrap ${
+                          item.isBerjalan ? 'text-emerald-400' : item.pengeluaran > 0 ? 'text-rose-400' : 'text-zinc-400'
+                        }`}>
+                          {item.isBerjalan
+                            ? `+${formatRupiah(item.selisih)}`
+                            : item.pengeluaran > 0
+                            ? `−${formatRupiah(item.pengeluaran)}`
+                            : 'Rp 0'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
 
-          <div className="mt-5 pt-4 border-t border-zinc-100 flex items-center justify-between text-xs sm:text-sm text-zinc-600">
-            <span className="font-medium">Sisa Kas Tersimpan:</span>
-            <span className="font-black font-mono text-zinc-950 text-base">{formatRupiah(sisaKasSurplus)}</span>
+          {/* Rekapitulasi Akumulasi Total Tahunan */}
+          <div className="mt-5 pt-4 border-t border-white/10">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-2">
+              Rekapitulasi Total Kumulatif Tahun Berjalan
+            </span>
+            <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
+              <div className="bg-white/[0.06] rounded-xl p-2.5 sm:p-3 border border-white/5 flex flex-col justify-between">
+                <span className="text-zinc-400 block text-[11px] sm:text-xs font-semibold mb-1">Saldo Awal</span>
+                <span className="font-bold text-zinc-100 font-mono text-xs sm:text-sm whitespace-nowrap block tracking-tight">
+                  {formatRupiah(data?.saldoAwal || 0)}
+                </span>
+              </div>
+
+              <div className="bg-white/[0.06] rounded-xl p-2.5 sm:p-3 border border-white/5 flex flex-col justify-between">
+                <span className="text-emerald-400 block text-[11px] sm:text-xs font-semibold mb-1">Total Masuk</span>
+                <span className="font-bold text-emerald-300 font-mono text-xs sm:text-sm whitespace-nowrap block tracking-tight">
+                  +{formatRupiah(data?.totalPemasukan || 0)}
+                </span>
+              </div>
+
+              <div className="bg-white/[0.06] rounded-xl p-2.5 sm:p-3 border border-white/5 flex flex-col justify-between">
+                <span className="text-rose-400 block text-[11px] sm:text-xs font-semibold mb-1">Total Keluar</span>
+                <span className="font-bold text-rose-300 font-mono text-xs sm:text-sm whitespace-nowrap block tracking-tight">
+                  −{formatRupiah(data?.totalPengeluaran || 0)}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Bento 3: Kepatuhan 70 Hunian (Col Span 3) */}
-        <div className="md:col-span-3 bg-white rounded-3xl p-6 sm:p-7 border border-zinc-200/80 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between text-xs sm:text-sm text-zinc-500 font-bold uppercase tracking-wider mb-2">
-              <span>Kepatuhan 70 Rumah</span>
-              <span className="text-emerald-800 font-extrabold bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200/60 text-xs">
-                {data?.persenKepatuhan || 0}% Lunas
-              </span>
+        {/* Bento 2 & 3: Arus Masuk vs Belanja & Kepatuhan 70 Hunian (Col Span 5 Stacked) */}
+        <div className="lg:col-span-5 flex flex-col gap-5">
+          {/* Bento 2: Arus Kas & Efisiensi Belanja */}
+          <div className="bg-white rounded-3xl p-6 sm:p-7 border border-zinc-200/80 shadow-xs flex flex-col justify-between flex-1">
+            <div>
+              <div className="flex items-center justify-between text-xs sm:text-sm text-zinc-500 font-bold uppercase tracking-wider mb-2">
+                <span>Arus Masuk vs Belanja</span>
+                <span className="text-zinc-950 font-mono font-extrabold text-sm">{rasioPengeluaran}% Terpakai</span>
+              </div>
+              
+              {/* Visual Dual Progress Bar */}
+              <div className="space-y-4 mt-4">
+                <div>
+                  <div className="flex items-center justify-between text-sm mb-1.5">
+                    <span className="text-emerald-800 font-bold flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                      Total Penerimaan
+                    </span>
+                    <span className="font-extrabold text-zinc-950 font-mono text-sm sm:text-base whitespace-nowrap">
+                      {formatRupiah(data?.totalPemasukan || 0)}
+                    </span>
+                  </div>
+                  <div className="w-full bg-emerald-100/70 h-2.5 rounded-full overflow-hidden">
+                    <div className="bg-emerald-500 h-2.5 rounded-full w-full"></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between text-sm mb-1.5">
+                    <span className="text-rose-700 font-bold flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                      Total Pengeluaran
+                    </span>
+                    <span className="font-extrabold text-zinc-950 font-mono text-sm sm:text-base whitespace-nowrap">
+                      {formatRupiah(data?.totalPengeluaran || 0)}
+                    </span>
+                  </div>
+                  <div className="w-full bg-zinc-100 h-2.5 rounded-full overflow-hidden">
+                    <div
+                      className="bg-rose-500 h-2.5 rounded-full transition-all duration-700"
+                      style={{ width: `${Math.min(rasioPengeluaran, 100)}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="mt-3 flex items-baseline gap-2.5">
-              <span className="text-4xl sm:text-5xl font-black tracking-tight text-zinc-950 font-mono">
-                {data ? Math.round((data.persenKepatuhan * 70) / 100) : 0}
-              </span>
-              <span className="text-sm font-semibold text-zinc-500">/ 70 Rumah</span>
-            </div>
-
-            <div className="w-full bg-zinc-100 h-2.5 rounded-full overflow-hidden mt-4">
-              <div
-                className="bg-zinc-950 h-2.5 rounded-full transition-all duration-700"
-                style={{ width: `${data?.persenKepatuhan || 0}%` }}
-              ></div>
+            <div className="mt-5 pt-4 border-t border-zinc-100 flex items-center justify-between text-xs sm:text-sm text-zinc-600">
+              <span className="font-medium">Sisa Kas Tersimpan:</span>
+              <span className="font-black font-mono text-zinc-950 text-base">{formatRupiah(sisaKasSurplus)}</span>
             </div>
           </div>
 
-          <div className="mt-5 pt-4 border-t border-zinc-100 flex items-center justify-between text-xs sm:text-sm text-zinc-600">
-            <span className="font-medium">Iuran Wajib:</span>
-            <span className="font-bold text-zinc-950 text-sm sm:text-base">Rp 50.000 / bln</span>
+          {/* Bento 3: Kepatuhan 70 Hunian */}
+          <div className="bg-white rounded-3xl p-6 sm:p-7 border border-zinc-200/80 shadow-xs flex flex-col justify-between flex-1">
+            <div>
+              <div className="flex items-center justify-between text-xs sm:text-sm text-zinc-500 font-bold uppercase tracking-wider mb-2">
+                <span>Kepatuhan 70 Rumah</span>
+                <span className="text-emerald-800 font-extrabold bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200/60 text-xs">
+                  {data?.persenKepatuhan || 0}% Lunas
+                </span>
+              </div>
+
+              <div className="mt-3 flex items-baseline gap-2.5">
+                <span className="text-4xl sm:text-5xl font-black tracking-tight text-zinc-950 font-mono">
+                  {data ? Math.round((data.persenKepatuhan * 70) / 100) : 0}
+                </span>
+                <span className="text-sm font-semibold text-zinc-500">/ 70 Rumah</span>
+              </div>
+
+              <div className="w-full bg-zinc-100 h-2.5 rounded-full overflow-hidden mt-4">
+                <div
+                  className="bg-zinc-950 h-2.5 rounded-full transition-all duration-700"
+                  style={{ width: `${data?.persenKepatuhan || 0}%` }}
+                ></div>
+              </div>
+            </div>
+
+            <div className="mt-5 pt-4 border-t border-zinc-100 flex items-center justify-between text-xs sm:text-sm text-zinc-600">
+              <span className="font-medium">Iuran Wajib:</span>
+              <span className="font-bold text-zinc-950 text-sm sm:text-base">Rp 50.000 / bln</span>
+            </div>
           </div>
         </div>
       </div>

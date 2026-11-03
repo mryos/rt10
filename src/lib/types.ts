@@ -56,12 +56,25 @@ export interface PerformaBlokKeuangan {
   persentase: number;
 }
 
+export interface RiwayatSaldoBulanan {
+  periode: string;
+  namaBulan: string;
+  label: string;
+  saldoAwal: number;
+  pemasukan: number;
+  pengeluaran: number;
+  saldoAkhir: number;
+  selisih: number;
+  isBerjalan?: boolean;
+}
+
 export interface RingkasanKeuangan {
   periode: string;
   tahun: number;
   saldoAwal: number;
   saldoBulanLalu: number;
   selisihBulanLalu: number;
+  riwayatSaldo?: RiwayatSaldoBulanan[];
   totalPemasukan: number;
   totalPengeluaran: number;
   saldoAkhir: number;

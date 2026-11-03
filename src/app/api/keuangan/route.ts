@@ -306,6 +306,43 @@ export async function GET(request: Request) {
     const saldoBulanLalu = 23000000;
     const selisihBulanLalu = saldoAkhir - saldoBulanLalu;
 
+    // Riwayat pergerakan saldo terperinci (minimal 2 bulan sebelumnya + bulan berjalan saat ini)
+    const riwayatSaldo = [
+      {
+        periode: 'September 2024',
+        namaBulan: 'Sep 2024',
+        label: '2 Bulan Lalu',
+        saldoAwal: 20320000,
+        pemasukan: 3100000,
+        pengeluaran: 0,
+        saldoAkhir: 23420000,
+        selisih: 3100000,
+        isBerjalan: false,
+      },
+      {
+        periode: 'Oktober 2024',
+        namaBulan: 'Okt 2024',
+        label: '1 Bulan Lalu',
+        saldoAwal: 23420000,
+        pemasukan: 0,
+        pengeluaran: 420000,
+        saldoAkhir: 23000000,
+        selisih: -420000,
+        isBerjalan: false,
+      },
+      {
+        periode: 'November 2024',
+        namaBulan: 'Nov 2024',
+        label: 'Bulan Berjalan',
+        saldoAwal: 23000000,
+        pemasukan: 3150000,
+        pengeluaran: 0,
+        saldoAkhir: 26150000,
+        selisih: 3150000,
+        isBerjalan: true,
+      },
+    ];
+
     const targetIuranTahunan = 70 * NOMINAL_IURAN_PER_RUMAH * 12; // 42.000.000 / thn
     const realisasiIuranTahunan = transaksiList
       .filter((t) => t.kategori === 'Iuran Wajib Warga')
@@ -386,6 +423,7 @@ export async function GET(request: Request) {
       saldoAwal: saldoAwalTahun,
       saldoBulanLalu,
       selisihBulanLalu,
+      riwayatSaldo,
       totalPemasukan,
       totalPengeluaran,
       saldoAkhir,
