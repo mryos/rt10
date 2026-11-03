@@ -406,7 +406,7 @@ export default function KeuanganDashboard() {
           </div>
         </div>
 
-        {/* Bento 2 & 3: Arus Masuk vs Belanja & Kepatuhan 70 Hunian (Col Span 5 Stacked) */}
+        {/* Bento Kolom Kanan: Arus Kas & Rekening Resmi RT 10 (Col Span 5 Stacked) */}
         <div className="lg:col-span-5 flex flex-col gap-5">
           {/* Bento 2: Arus Kas & Efisiensi Belanja */}
           <div className="bg-white rounded-3xl p-6 sm:p-7 border border-zinc-200/80 shadow-xs flex flex-col justify-between flex-1">
@@ -459,100 +459,7 @@ export default function KeuanganDashboard() {
             </div>
           </div>
 
-          {/* Bento 3: Kepatuhan 70 Hunian */}
-          <div className="bg-white rounded-3xl p-6 sm:p-7 border border-zinc-200/80 shadow-xs flex flex-col justify-between flex-1">
-            <div>
-              <div className="flex items-center justify-between text-xs sm:text-sm text-zinc-500 font-bold uppercase tracking-wider mb-2">
-                <span>Kepatuhan 70 Rumah</span>
-                <span className="text-emerald-800 font-extrabold bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200/60 text-xs">
-                  {data?.persenKepatuhan || 0}% Lunas
-                </span>
-              </div>
-
-              <div className="mt-3 flex items-baseline gap-2.5">
-                <span className="text-4xl sm:text-5xl font-black tracking-tight text-zinc-950 font-mono">
-                  {data ? Math.round((data.persenKepatuhan * 70) / 100) : 0}
-                </span>
-                <span className="text-sm font-semibold text-zinc-500">/ 70 Rumah</span>
-              </div>
-
-              <div className="w-full bg-zinc-100 h-2.5 rounded-full overflow-hidden mt-4">
-                <div
-                  className="bg-zinc-950 h-2.5 rounded-full transition-all duration-700"
-                  style={{ width: `${data?.persenKepatuhan || 0}%` }}
-                ></div>
-              </div>
-            </div>
-
-            <div className="mt-5 pt-4 border-t border-zinc-100 flex items-center justify-between text-xs sm:text-sm text-zinc-600">
-              <span className="font-medium">Iuran Wajib:</span>
-              <span className="font-bold text-zinc-950 text-sm sm:text-base">Rp 50.000 / bln</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ============================================================== */}
-      {/* BENTO GRID LEVEL 2: Alokasi Belanja & Rekening Kas (2 Bento)    */}
-      {/* ============================================================== */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
-        {/* Bento 4: Alokasi Belanja Rutin Lingkungan (Col Span 7) */}
-        <div className="md:col-span-7 bg-white rounded-3xl p-6 sm:p-7 border border-zinc-200/80 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between border-b border-zinc-100 pb-4 mb-4">
-            <div>
-              <h2 className="text-base sm:text-lg font-extrabold text-zinc-950 tracking-tight flex items-center gap-2.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
-                Pos Alokasi Belanja Lingkungan
-              </h2>
-              <p className="text-xs sm:text-sm text-zinc-500 mt-1">
-                Rincian belanja operasional rutin satpam, kebersihan parit, dan fasilitas umum
-              </p>
-            </div>
-            <span className="text-sm font-extrabold font-mono text-zinc-950 bg-zinc-100 px-3 py-1.5 rounded-xl border border-zinc-200/60">
-              {formatRupiah(data?.totalPengeluaran || 0)}
-            </span>
-          </div>
-
-          <div className="space-y-4">
-            {data?.alokasiPengeluaran.map((item) => (
-              <div key={item.kategori} className="space-y-1.5">
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2.5">
-                    <span
-                      className="w-3 h-3 rounded-full shrink-0"
-                      style={{ backgroundColor: item.warna }}
-                    />
-                    <span className="font-bold text-zinc-900 text-sm sm:text-base">{item.kategori}</span>
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    <span className="font-extrabold text-zinc-950 font-mono text-sm sm:text-base">{formatRupiah(item.nominal)}</span>
-                    <span className="text-zinc-500 font-bold font-mono text-xs sm:text-sm">({item.persentase}%)</span>
-                  </div>
-                </div>
-
-                <div className="w-full bg-zinc-100 h-2 rounded-full overflow-hidden">
-                  <div
-                    className="h-2 rounded-full transition-all duration-500"
-                    style={{
-                      width: `${item.persentase}%`,
-                      backgroundColor: item.warna,
-                    }}
-                  />
-                </div>
-                <p className="text-xs text-zinc-500 pl-5">{item.deskripsi}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-5 pt-4 border-t border-zinc-100 text-xs sm:text-sm text-zinc-500 flex items-center justify-between">
-            <span>Audit rutin oleh Sie Sarpras & Keamanan RT</span>
-            <span className="font-semibold text-zinc-800">5 Pos Pengeluaran Terverifikasi</span>
-          </div>
-        </div>
-
-        {/* Bento 5: Rekening Kas Resmi & Sumber Dana (Col Span 5) */}
-        <div className="md:col-span-5 flex flex-col gap-5">
-          {/* Sub-Bento A: Virtual Account / Rekening Resmi */}
+          {/* Rekening Kas Resmi RT 10 (Virtual Account / Setor Iuran) */}
           <div className="bg-zinc-950 text-white rounded-3xl p-6 shadow-xs border border-zinc-800/80 flex flex-col justify-between">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">
@@ -580,113 +487,15 @@ export default function KeuanganDashboard() {
               Cantumkan berita transfer: <strong className="text-zinc-200">[No. Blok - Nama]</strong> saat setor iuran.
             </p>
           </div>
-
-          {/* Sub-Bento B: Komposisi Sumber Dana */}
-          <div className="bg-white rounded-3xl p-6 border border-zinc-200/80 shadow-xs flex-1 flex flex-col justify-between">
-            <div className="flex items-center justify-between border-b border-zinc-100 pb-3 mb-3">
-              <span className="text-sm sm:text-base font-extrabold text-zinc-950">Sumber Pemasukan Kas</span>
-              <span className="text-sm sm:text-base font-mono font-black text-emerald-700">{formatRupiah(data?.totalPemasukan || 0)}</span>
-            </div>
-
-            <div className="space-y-4">
-              {data?.alokasiPemasukan.map((item) => (
-                <div key={item.kategori} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-zinc-800 font-bold text-sm sm:text-base">{item.kategori}</span>
-                    <span className="font-extrabold text-emerald-800 font-mono text-sm sm:text-base">{formatRupiah(item.nominal)}</span>
-                  </div>
-                  <div className="w-full bg-zinc-100 h-2 rounded-full overflow-hidden">
-                    <div
-                      className="h-2 rounded-full transition-all duration-500"
-                      style={{ width: `${item.persentase}%`, backgroundColor: item.warna }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <p className="text-xs text-zinc-500 pt-3 mt-3 border-t border-zinc-100 leading-relaxed">
-              Iuran rutin 70 rumah @ Rp 50.000 / bln ditambah donatur sukarela warga.
-            </p>
-          </div>
         </div>
       </div>
 
       {/* ============================================================== */}
-      {/* BENTO GRID LEVEL 3: Blok Hunian & Mini Scrollable Ledger        */}
+      {/* BENTO GRID LEVEL 2: Transparansi Belanja & Mutasi Buku Kas     */}
       {/* ============================================================== */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
-        {/* Bento 6: Sebaran 7 Blok Hunian A s/d G (Col Span 5) */}
-        <div className="md:col-span-5 bg-white rounded-3xl p-6 sm:p-7 border border-zinc-200/80 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between border-b border-zinc-100 pb-4 mb-4">
-            <div>
-              <h2 className="text-base sm:text-lg font-extrabold text-zinc-950 tracking-tight flex items-center gap-2.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                Kepatuhan Per Blok (70 Rumah)
-              </h2>
-              <p className="text-xs sm:text-sm text-zinc-500 mt-1">
-                Monitoring ketercapaian kas per klaster hunian A s/d G
-              </p>
-            </div>
-            <span className="text-xs font-bold text-zinc-700 bg-zinc-100 px-3 py-1 rounded-lg font-mono">
-              7 Blok
-            </span>
-          </div>
-
-          {/* Compact Grid List of 7 Blocks with larger typography */}
-          <div className="space-y-3">
-            {data?.performaBlok.map((b) => {
-              const isTertib = b.persentase >= 80;
-              return (
-                <div
-                  key={b.blok}
-                  className="p-3.5 rounded-2xl bg-zinc-50/80 border border-zinc-200/70 hover:bg-white hover:border-zinc-300 transition-all flex items-center justify-between gap-3.5"
-                >
-                  <div className="w-20 font-black text-sm sm:text-base text-zinc-950 shrink-0 font-mono">
-                    {b.blok}
-                  </div>
-
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between text-xs sm:text-sm mb-1.5">
-                      <span className="text-zinc-600 font-semibold">
-                        {b.lunas}/{b.totalRumah} rumah
-                      </span>
-                      <span className="font-extrabold text-zinc-950 font-mono text-sm">{b.persentase}%</span>
-                    </div>
-                    <div className="w-full bg-zinc-200 h-1.5 rounded-full overflow-hidden">
-                      <div
-                        className={`h-1.5 rounded-full transition-all duration-500 ${
-                          isTertib ? 'bg-emerald-500' : 'bg-amber-500'
-                        }`}
-                        style={{ width: `${b.persentase}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="shrink-0 text-right">
-                    <span
-                      className={`text-xs font-extrabold px-3 py-1 rounded-full border ${
-                        isTertib
-                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                          : 'bg-amber-50 text-amber-800 border-amber-300'
-                      }`}
-                    >
-                      {isTertib ? 'Tertib' : 'Sebagian'}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-between text-xs text-zinc-500">
-            <span>Total Target: 70 Hunian Warga</span>
-            <span className="font-semibold text-zinc-800">Update Tiap Awal Bulan</span>
-          </div>
-        </div>
-
-        {/* Bento 7: Buku Kas & Catatan Mutasi Terbuka (Col Span 7)          */}
-        <div className="md:col-span-7 bg-white rounded-3xl p-6 sm:p-7 border border-zinc-200/80 shadow-xs flex flex-col justify-between">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Buku Kas & Catatan Mutasi Terbuka (Col Span 7) */}
+        <div className="lg:col-span-7 bg-white rounded-3xl p-6 sm:p-7 border border-zinc-200/80 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-100 pb-4 mb-4">
               <div>
@@ -748,7 +557,7 @@ export default function KeuanganDashboard() {
             </div>
 
             {/* Scrollable Mini Table Container with larger font sizes */}
-            <div className="overflow-y-auto max-h-[320px] border border-zinc-200/70 rounded-2xl divide-y divide-zinc-100 pr-1">
+            <div className="overflow-y-auto max-h-[340px] border border-zinc-200/70 rounded-2xl divide-y divide-zinc-100 pr-1">
               {filteredTransaksi.length === 0 ? (
                 <div className="py-14 text-center text-sm font-semibold text-zinc-400">
                   Tidak ada transaksi kas yang sesuai filter.
@@ -774,13 +583,13 @@ export default function KeuanganDashboard() {
 
                       <div className="text-right shrink-0">
                         <div
-                          className={`font-mono font-black text-sm sm:text-base ${
+                          className={`font-mono font-black text-sm sm:text-base whitespace-nowrap ${
                             isMasuk ? 'text-emerald-700' : 'text-rose-700'
                           }`}
                         >
-                          {isMasuk ? '+' : '-'} {formatRupiah(item.nominal)}
+                          {isMasuk ? '+' : '−'} {formatRupiah(item.nominal)}
                         </div>
-                        <div className="text-xs text-zinc-500 font-mono mt-0.5 font-semibold">
+                        <div className="text-xs text-zinc-500 font-mono mt-0.5 font-semibold whitespace-nowrap">
                           Saldo: {formatRupiah(item.saldoSetelah)}
                         </div>
                       </div>
@@ -794,6 +603,200 @@ export default function KeuanganDashboard() {
           <div className="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-between text-xs sm:text-sm text-zinc-500">
             <span>Menampilkan <strong className="text-zinc-900">{filteredTransaksi.length}</strong> catatan mutasi kas</span>
             <span className="font-medium">Scroll untuk melihat histori transaksi</span>
+          </div>
+        </div>
+
+        {/* Kolom Kanan: Pos Belanja & Sumber Pemasukan (Col Span 5) */}
+        <div className="lg:col-span-5 flex flex-col gap-5">
+          {/* Pos Alokasi Belanja Rutin Lingkungan */}
+          <div className="bg-white rounded-3xl p-6 sm:p-7 border border-zinc-200/80 shadow-xs flex flex-col justify-between flex-1">
+            <div className="flex items-center justify-between border-b border-zinc-100 pb-3 mb-3">
+              <div>
+                <h2 className="text-base sm:text-lg font-extrabold text-zinc-950 tracking-tight flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+                  Pos Belanja Lingkungan
+                </h2>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Operasional rutin satpam, kebersihan & sarpras
+                </p>
+              </div>
+              <span className="text-xs sm:text-sm font-extrabold font-mono text-zinc-950 bg-zinc-100 px-3 py-1.5 rounded-xl border border-zinc-200/60 whitespace-nowrap">
+                {formatRupiah(data?.totalPengeluaran || 0)}
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {data?.alokasiPengeluaran.map((item) => (
+                <div key={item.kategori} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: item.warna }}
+                      />
+                      <span className="font-bold text-zinc-900 text-xs sm:text-sm">{item.kategori}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-zinc-950 font-mono text-xs sm:text-sm whitespace-nowrap">{formatRupiah(item.nominal)}</span>
+                      <span className="text-zinc-500 font-bold font-mono text-[11px]">({item.persentase}%)</span>
+                    </div>
+                  </div>
+
+                  <div className="w-full bg-zinc-100 h-2 rounded-full overflow-hidden">
+                    <div
+                      className="h-2 rounded-full transition-all duration-500"
+                      style={{
+                        width: `${item.persentase}%`,
+                        backgroundColor: item.warna,
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-zinc-100 text-xs text-zinc-500 flex items-center justify-between">
+              <span>Audit rutin Sie Sarpras & Keamanan</span>
+              <span className="font-semibold text-zinc-800">5 Pos Pengeluaran</span>
+            </div>
+          </div>
+
+          {/* Komposisi Sumber Pemasukan Kas */}
+          <div className="bg-white rounded-3xl p-6 border border-zinc-200/80 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between border-b border-zinc-100 pb-3 mb-3">
+              <span className="text-sm font-extrabold text-zinc-950">Sumber Pemasukan Kas</span>
+              <span className="text-sm font-mono font-black text-emerald-700 whitespace-nowrap">{formatRupiah(data?.totalPemasukan || 0)}</span>
+            </div>
+
+            <div className="space-y-3">
+              {data?.alokasiPemasukan.map((item) => (
+                <div key={item.kategori} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
+                    <span className="text-zinc-800 font-bold">{item.kategori}</span>
+                    <span className="font-extrabold text-emerald-800 font-mono whitespace-nowrap">{formatRupiah(item.nominal)}</span>
+                  </div>
+                  <div className="w-full bg-zinc-100 h-2 rounded-full overflow-hidden">
+                    <div
+                      className="h-2 rounded-full transition-all duration-500"
+                      style={{ width: `${item.persentase}%`, backgroundColor: item.warna }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-xs text-zinc-500 pt-3 mt-3 border-t border-zinc-100 leading-relaxed">
+              Iuran rutin 70 rumah @ Rp 50.000 / bln ditambah donatur sukarela warga.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ============================================================== */}
+      {/* BENTO GRID LEVEL 3: Monitoring Kepatuhan Iuran Warga (Bawah)    */}
+      {/* ============================================================== */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+        {/* Ringkasan Kepatuhan 70 Rumah (Col Span 4) */}
+        <div className="md:col-span-4 bg-white rounded-3xl p-6 sm:p-7 border border-zinc-200/80 shadow-xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between text-xs sm:text-sm text-zinc-500 font-bold uppercase tracking-wider mb-2">
+              <span>Kepatuhan 70 Rumah</span>
+              <span className="text-emerald-800 font-extrabold bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200/60 text-xs">
+                {data?.persenKepatuhan || 0}% Lunas
+              </span>
+            </div>
+
+            <div className="mt-3 flex items-baseline gap-2.5">
+              <span className="text-4xl sm:text-5xl font-black tracking-tight text-zinc-950 font-mono">
+                {data ? Math.round((data.persenKepatuhan * 70) / 100) : 0}
+              </span>
+              <span className="text-sm font-semibold text-zinc-500">/ 70 Rumah</span>
+            </div>
+
+            <div className="w-full bg-zinc-100 h-2.5 rounded-full overflow-hidden mt-4">
+              <div
+                className="bg-zinc-950 h-2.5 rounded-full transition-all duration-700"
+                style={{ width: `${data?.persenKepatuhan || 0}%` }}
+              ></div>
+            </div>
+
+            <p className="text-xs text-zinc-500 mt-4 leading-relaxed">
+              Persentase kepatuhan warga dalam menyetor iuran rutin bulanan untuk operasional RT 10.
+            </p>
+          </div>
+
+          <div className="mt-5 pt-4 border-t border-zinc-100 flex items-center justify-between text-xs sm:text-sm text-zinc-600">
+            <span className="font-medium">Iuran Wajib:</span>
+            <span className="font-bold text-zinc-950 text-sm sm:text-base">Rp 50.000 / bln</span>
+          </div>
+        </div>
+
+        {/* Kepatuhan Per Blok Hunian A s/d G (Col Span 8) */}
+        <div className="md:col-span-8 bg-white rounded-3xl p-6 sm:p-7 border border-zinc-200/80 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between border-b border-zinc-100 pb-4 mb-4">
+            <div>
+              <h2 className="text-base sm:text-lg font-extrabold text-zinc-950 tracking-tight flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                Kepatuhan Per Blok (70 Rumah)
+              </h2>
+              <p className="text-xs sm:text-sm text-zinc-500 mt-1">
+                Monitoring ketercapaian kas per klaster hunian Blok A s/d Blok G
+              </p>
+            </div>
+            <span className="text-xs font-bold text-zinc-700 bg-zinc-100 px-3 py-1 rounded-lg font-mono">
+              7 Blok Hunian
+            </span>
+          </div>
+
+          {/* Grid 2-kolom untuk 7 blok hunian agar hemat ruang vertikal */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {data?.performaBlok.map((b) => {
+              const isTertib = b.persentase >= 80;
+              return (
+                <div
+                  key={b.blok}
+                  className="p-3.5 rounded-2xl bg-zinc-50/80 border border-zinc-200/70 hover:bg-white hover:border-zinc-300 transition-all flex items-center justify-between gap-3"
+                >
+                  <div className="w-16 font-black text-sm sm:text-base text-zinc-950 shrink-0 font-mono">
+                    {b.blok}
+                  </div>
+
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="text-zinc-600 font-semibold">
+                        {b.lunas}/{b.totalRumah} rumah
+                      </span>
+                      <span className="font-extrabold text-zinc-950 font-mono text-xs">{b.persentase}%</span>
+                    </div>
+                    <div className="w-full bg-zinc-200 h-1.5 rounded-full overflow-hidden">
+                      <div
+                        className={`h-1.5 rounded-full transition-all duration-500 ${
+                          isTertib ? 'bg-emerald-500' : 'bg-amber-500'
+                        }`}
+                        style={{ width: `${b.persentase}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="shrink-0 text-right">
+                    <span
+                      className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border ${
+                        isTertib
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                          : 'bg-amber-50 text-amber-800 border-amber-300'
+                      }`}
+                    >
+                      {isTertib ? 'Tertib' : 'Sebagian'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-between text-xs text-zinc-500">
+            <span>Total Target: 70 Hunian Warga RT 10</span>
+            <span className="font-semibold text-zinc-800">Update berkala per awal bulan</span>
           </div>
         </div>
       </div>
