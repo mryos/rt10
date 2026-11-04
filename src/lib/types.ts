@@ -21,7 +21,7 @@ export interface Berita {
 
 export interface AduanPayload {
   nama: string;
-  noRumah: string;
+  noRumah?: string;
   kategori: string;
   isiAduan: string;
 }

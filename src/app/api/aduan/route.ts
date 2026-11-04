@@ -8,13 +8,20 @@ export async function POST(request: Request) {
   try {
     const body: AduanPayload = await request.json();
 
-    // Validasi server-side
-    if (!body.noRumah || !body.kategori || !body.isiAduan) {
+    // Validasi server-side: hanya kategori dan isiAduan yang wajib
+    if (!body.kategori || !body.isiAduan) {
       return NextResponse.json(
-        { success: false, message: 'Semua field wajib diisi (kecuali Nama)' },
+        { success: false, message: 'Kategori dan rincian aduan/aspirasi wajib diisi' },
         { status: 400 }
       );
     }
+
+    const payload: AduanPayload = {
+      nama: body.nama ? body.nama.trim() || 'Anonim' : 'Anonim',
+      noRumah: body.noRumah ? body.noRumah.trim() || '-' : '-',
+      kategori: body.kategori,
+      isiAduan: body.isiAduan,
+    };
 
     const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
@@ -22,7 +29,7 @@ export async function POST(request: Request) {
       redirect: 'follow',
       body: JSON.stringify({
         action: 'submitAduan',
-        data: body,
+        data: payload,
       }),
     });
 

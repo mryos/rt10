@@ -2,7 +2,7 @@ import AduanForm from '@/components/AduanForm';
 
 export default function AduanPage() {
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
+    <div className="max-w-3xl mx-auto space-y-8">
       {/* Header */}
       <div className="pb-6 border-b border-zinc-200/60">
         <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-100 text-zinc-600 text-[11px] font-semibold mb-3 border border-zinc-200/50">

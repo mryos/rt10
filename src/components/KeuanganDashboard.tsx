@@ -693,111 +693,38 @@ export default function KeuanganDashboard() {
       </div>
 
       {/* ============================================================== */}
-      {/* BENTO GRID LEVEL 3: Monitoring Kepatuhan Iuran Warga (Bawah)    */}
+      {/* SEKSI BAWAH: Ringkasan Kepatuhan 70 Hunian (Kompak & Elegan)  */}
       {/* ============================================================== */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
-        {/* Ringkasan Kepatuhan 70 Rumah (Col Span 4) */}
-        <div className="md:col-span-4 bg-white rounded-3xl p-6 sm:p-7 border border-zinc-200/80 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between text-xs sm:text-sm text-zinc-500 font-bold uppercase tracking-wider mb-2">
-              <span>Kepatuhan 70 Rumah</span>
-              <span className="text-emerald-800 font-extrabold bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200/60 text-xs">
+      <div className="bg-white rounded-3xl p-6 sm:p-7 border border-zinc-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+          <div className="flex items-center gap-3">
+            <span className="text-4xl sm:text-5xl font-black tracking-tight text-zinc-950 font-mono">
+              {data ? Math.round((data.persenKepatuhan * 70) / 100) : 0}
+            </span>
+            <div className="text-xs">
+              <span className="font-bold text-zinc-950 text-sm block">/ 70 Rumah</span>
+              <span className="text-emerald-800 font-extrabold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/60 inline-block mt-0.5">
                 {data?.persenKepatuhan || 0}% Lunas
               </span>
             </div>
-
-            <div className="mt-3 flex items-baseline gap-2.5">
-              <span className="text-4xl sm:text-5xl font-black tracking-tight text-zinc-950 font-mono">
-                {data ? Math.round((data.persenKepatuhan * 70) / 100) : 0}
-              </span>
-              <span className="text-sm font-semibold text-zinc-500">/ 70 Rumah</span>
-            </div>
-
-            <div className="w-full bg-zinc-100 h-2.5 rounded-full overflow-hidden mt-4">
-              <div
-                className="bg-zinc-950 h-2.5 rounded-full transition-all duration-700"
-                style={{ width: `${data?.persenKepatuhan || 0}%` }}
-              ></div>
-            </div>
-
-            <p className="text-xs text-zinc-500 mt-4 leading-relaxed">
-              Persentase kepatuhan warga dalam menyetor iuran rutin bulanan untuk operasional RT 10.
-            </p>
           </div>
-
-          <div className="mt-5 pt-4 border-t border-zinc-100 flex items-center justify-between text-xs sm:text-sm text-zinc-600">
-            <span className="font-medium">Iuran Wajib:</span>
-            <span className="font-bold text-zinc-950 text-sm sm:text-base">Rp 50.000 / bln</span>
+          <div className="w-px h-10 bg-zinc-200 hidden sm:block"></div>
+          <div>
+            <h3 className="font-bold text-zinc-950 text-sm sm:text-base">Kepatuhan Iuran Bulanan 70 Hunian</h3>
+            <p className="text-xs text-zinc-500 mt-0.5">Iuran rutin warga RT 10 sebesar Rp 50.000 / bulan untuk operasional lingkungan.</p>
           </div>
         </div>
 
-        {/* Kepatuhan Per Blok Hunian A s/d G (Col Span 8) */}
-        <div className="md:col-span-8 bg-white rounded-3xl p-6 sm:p-7 border border-zinc-200/80 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between border-b border-zinc-100 pb-4 mb-4">
-            <div>
-              <h2 className="text-base sm:text-lg font-extrabold text-zinc-950 tracking-tight flex items-center gap-2.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                Kepatuhan Per Blok (70 Rumah)
-              </h2>
-              <p className="text-xs sm:text-sm text-zinc-500 mt-1">
-                Monitoring ketercapaian kas per klaster hunian Blok A s/d Blok G
-              </p>
-            </div>
-            <span className="text-xs font-bold text-zinc-700 bg-zinc-100 px-3 py-1 rounded-lg font-mono">
-              7 Blok Hunian
-            </span>
+        <div className="flex items-center gap-4 w-full md:w-80">
+          <div className="flex-1 bg-zinc-100 h-2.5 rounded-full overflow-hidden">
+            <div
+              className="bg-zinc-950 h-2.5 rounded-full transition-all duration-700"
+              style={{ width: `${data?.persenKepatuhan || 0}%` }}
+            ></div>
           </div>
-
-          {/* Grid 2-kolom untuk 7 blok hunian agar hemat ruang vertikal */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {data?.performaBlok.map((b) => {
-              const isTertib = b.persentase >= 80;
-              return (
-                <div
-                  key={b.blok}
-                  className="p-3.5 rounded-2xl bg-zinc-50/80 border border-zinc-200/70 hover:bg-white hover:border-zinc-300 transition-all flex items-center justify-between gap-3"
-                >
-                  <div className="w-16 font-black text-sm sm:text-base text-zinc-950 shrink-0 font-mono">
-                    {b.blok}
-                  </div>
-
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="text-zinc-600 font-semibold">
-                        {b.lunas}/{b.totalRumah} rumah
-                      </span>
-                      <span className="font-extrabold text-zinc-950 font-mono text-xs">{b.persentase}%</span>
-                    </div>
-                    <div className="w-full bg-zinc-200 h-1.5 rounded-full overflow-hidden">
-                      <div
-                        className={`h-1.5 rounded-full transition-all duration-500 ${
-                          isTertib ? 'bg-emerald-500' : 'bg-amber-500'
-                        }`}
-                        style={{ width: `${b.persentase}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="shrink-0 text-right">
-                    <span
-                      className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border ${
-                        isTertib
-                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                          : 'bg-amber-50 text-amber-800 border-amber-300'
-                      }`}
-                    >
-                      {isTertib ? 'Tertib' : 'Sebagian'}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-between text-xs text-zinc-500">
-            <span>Total Target: 70 Hunian Warga RT 10</span>
-            <span className="font-semibold text-zinc-800">Update berkala per awal bulan</span>
-          </div>
+          <span className="text-xs font-mono font-bold text-zinc-700 shrink-0">
+            {data?.persenKepatuhan || 0}%
+          </span>
         </div>
       </div>
     </div>

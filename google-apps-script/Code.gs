@@ -472,8 +472,8 @@ function getBeritaById(id) {
 // ADUAN DATA
 // ============================================================
 function submitAduan(aduanData) {
-  if (!aduanData.noRumah || !aduanData.kategori || !aduanData.isiAduan) {
-    return { success: false, message: 'Data aduan tidak lengkap' };
+  if (!aduanData.kategori || !aduanData.isiAduan) {
+    return { success: false, message: 'Data aduan tidak lengkap (kategori dan isi aduan wajib diisi)' };
   }
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -486,13 +486,16 @@ function submitAduan(aduanData) {
     new Date(), 'Asia/Jakarta', 'dd/MM/yyyy HH:mm:ss'
   );
 
+  var noRumahVal = (aduanData.noRumah && aduanData.noRumah.trim() !== '') ? aduanData.noRumah : '-';
+  var namaVal = (aduanData.nama && aduanData.nama.trim() !== '') ? aduanData.nama : 'Anonim';
+
   sheet.appendRow([
     timestamp,
-    aduanData.nama || 'Anonim',
-    aduanData.noRumah,
+    namaVal,
+    noRumahVal,
     aduanData.kategori,
     aduanData.isiAduan,
-    'Diproses \u23F3'
+    'Menunggu Tindakan'
   ]);
 
   return { success: true, message: 'Aduan berhasil dikirim!' };

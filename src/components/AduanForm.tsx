@@ -32,8 +32,8 @@ export default function AduanForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!noRumah || !kategori || !isiAduan.trim()) {
-      setResult({ success: false, message: 'Harap lengkapi nomor rumah, kategori, dan isi aduan Anda.' });
+    if (!kategori || !isiAduan.trim()) {
+      setResult({ success: false, message: 'Harap lengkapi kategori dan isi aduan/aspirasi Anda.' });
       return;
     }
 
@@ -46,7 +46,7 @@ export default function AduanForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nama: nama.trim() || 'Anonim',
-          noRumah,
+          noRumah: noRumah || '-',
           kategori,
           isiAduan: isiAduan.trim(),
         }),
@@ -86,18 +86,17 @@ export default function AduanForm() {
 
         {/* Grid 2 Kolom untuk No Rumah & Kategori */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* No. Rumah */}
+          {/* No. Rumah (Opsional) */}
           <div>
             <label className="block text-xs font-semibold text-zinc-700 uppercase tracking-wider mb-2">
-              Nomor Blok / Rumah <span className="text-rose-500">*</span>
+              Nomor Blok / Rumah <span className="text-zinc-400 font-normal normal-case">(Opsional, bisa dikosongkan)</span>
             </label>
             <select
               value={noRumah}
               onChange={(e) => setNoRumah(e.target.value)}
               className="w-full px-3.5 py-2.5 text-xs text-zinc-900 bg-zinc-50 border border-zinc-200/80 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all cursor-pointer"
-              required
             >
-              <option value="">Pilih Hunian...</option>
+              <option value="">Tanpa Blok / Rumah (Dikosongkan)</option>
               {BLOK_LIST.map((blok) => (
                 <option key={blok} value={blok}>
                   {blok}
