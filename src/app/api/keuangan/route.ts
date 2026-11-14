@@ -281,6 +281,28 @@ export async function GET(request: Request) {
         penanggungJawab: 'Bendahara RT',
         noBukti: 'KW-11/IUR/2024',
       },
+      {
+        id: 'TRX-2026-001',
+        tanggal: '23 Nov 2026',
+        kategori: 'Kebersihan Lingkungan',
+        keterangan: 'Kebersihan RT 04 / RW 02',
+        tipe: 'masuk',
+        nominal: 4200000,
+        saldoSetelah: 20300000,
+        penanggungJawab: 'Bendahara RT',
+        noBukti: 'KW-11/01/2026',
+      },
+      {
+        id: 'TRX-2026-002',
+        tanggal: '28 Nov 2026',
+        kategori: 'Operasional',
+        keterangan: 'Keperasiatan RT 04 / RW 02',
+        tipe: 'keluar',
+        nominal: 1850000,
+        saldoSetelah: 18450000,
+        penanggungJawab: 'Sie Operasional',
+        noBukti: 'KW-11/02/2026',
+      },
     ];
 
     // Filter berdasarkan bulan jika dipilih spesifik
