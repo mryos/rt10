@@ -77,7 +77,7 @@ export async function GET(request: Request) {
         keterangan: `Penerimaan iuran kas warga RT 10 (${totalKKBayar} dari ${totalRumah} KK terverifikasi)`,
         tipe: 'masuk',
         nominal: totalPemasukanIuran,
-        saldoSetelah: 16000000 + totalPemasukanIuran,
+        saldoSetelah: totalPemasukanIuran,
         penanggungJawab: 'Bendahara RT',
         noBukti: `KW-${monthParam.toUpperCase()}/IUR/${year}`,
       });
@@ -96,14 +96,14 @@ export async function GET(request: Request) {
         keterangan: `Pembayaran ${it.nama} RT 10 (${periodTitle})`,
         tipe: 'keluar',
         nominal: it.nominal,
-        saldoSetelah: 16000000 + totalPemasukanIuran - cumulativeExpense,
+        saldoSetelah: totalPemasukanIuran - cumulativeExpense,
         penanggungJawab: it.kategori === 'Keamanan' ? 'Sie Keamanan' : 'Sie Operasional',
         noBukti: `NOTA-${it.kategori.substring(0, 3).toUpperCase()}-${monthParam.toUpperCase()}`,
       });
     });
 
-    const saldoAwal = 16000000;
-    const saldoAkhir = saldoAwal + totalPemasukanIuran - totalPengeluaranKas;
+    const saldoAwal = 0;
+    const saldoAkhir = totalPemasukanIuran - totalPengeluaranKas;
 
     // 3. Pos Alokasi Pengeluaran (Dihitung langsung dari data spreadsheet)
     const categoryTotals: { [key: string]: number } = {};

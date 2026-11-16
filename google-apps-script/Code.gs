@@ -181,65 +181,6 @@ function setupDBKeuanganInternal(ss) {
        .setFontColor('#FFFFFF')
        .setFontWeight('bold');
   sheet.setFrozenRows(1);
-
-  var sampleData = [
-    ['TRX-001', '05/01/2024', 'masuk', 'Iuran Wajib Warga', 'Penerimaan iuran kas bulanan warga (58 rumah lunas)', 2900000, 18400000, 'Bendahara RT', 'KW-01/IUR/2024'],
-    ['TRX-002', '08/01/2024', 'keluar', 'Keamanan Lingkungan', 'Honor dan konsumsi pos satpam malam 2 personel', 1600000, 16800000, 'Sie Keamanan', 'NOTA-01/SEC'],
-    ['TRX-003', '15/01/2024', 'keluar', 'Kebersihan Lingkungan', 'Biaya pemeliharaan kebersihan lingkungan warga', 950000, 15850000, 'Sie Kebersihan', 'KWT-DPS-01'],
-    ['TRX-004', '22/01/2024', 'keluar', 'Fasilitas & Lampu Jalan', 'Penggantian 4 unit bohlam LED PJU gang Blok C dan F', 260000, 15590000, 'Sie Sarpras', 'STR-TOKO-LISTRIK'],
-    ['TRX-005', '05/02/2024', 'masuk', 'Iuran Wajib Warga', 'Penerimaan iuran kas bulanan warga (61 rumah lunas)', 3050000, 18640000, 'Bendahara RT', 'KW-02/IUR/2024'],
-    ['TRX-006', '10/02/2024', 'masuk', 'Donasi & Sumbangan', 'Sumbangan sukarela renovasi kanopi Pos Ronda', 1250000, 19890000, 'Ketua RT', 'DON-02/E-KNP'],
-    ['TRX-007', '12/02/2024', 'keluar', 'Keamanan Lingkungan', 'Honor bulanan petugas satpam lingkungan & senter', 1650000, 18240000, 'Sie Keamanan', 'NOTA-02/SEC'],
-    ['TRX-008', '05/03/2024', 'masuk', 'Iuran Wajib Warga', 'Penerimaan iuran kas bulanan warga (59 rumah lunas)', 2950000, 21190000, 'Bendahara RT', 'KW-03/IUR/2024'],
-    ['TRX-009', '15/03/2024', 'keluar', 'Kebersihan Lingkungan', 'Honor petugas kebersihan bulanan dan pembersihan parit', 950000, 20240000, 'Sie Kebersihan', 'KWT-DPS-03'],
-    ['TRX-010', '10/04/2024', 'keluar', 'Kegiatan Warga', 'Perlengkapan dan konsumsi Halal Bihalal Idul Fitri', 1350000, 18890000, 'Panitia HB', 'NOTA-HB-1445']
-  ];
-
-  sheet.getRange(2, 1, sampleData.length, headers.length).setValues(sampleData);
-}
-
-/**
- * Isi Dummy Iuran 2024
- */
-function isiDummyIuran2024() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName('DB_Iuran');
-  if (!sheet) {
-    SpreadsheetApp.getUi().alert('❌ Sheet DB_Iuran tidak ditemukan. Jalankan setupSheets() terlebih dahulu.');
-    return;
-  }
-
-  var data = sheet.getDataRange().getValues();
-  var headers = data[0];
-
-  var months = ['Jan 2024', 'Feb 2024', 'Mar 2024', 'Apr 2024', 'Mei 2024', 'Jun 2024',
-                'Jul 2024', 'Agu 2024', 'Sep 2024', 'Okt 2024', 'Nov 2024', 'Des 2024'];
-  
-  var colIndices = [];
-  for (var m = 0; m < months.length; m++) {
-    for (var c = 0; c < headers.length; c++) {
-      if (headers[c].toString().trim() === months[m]) {
-        colIndices.push(c);
-        break;
-      }
-    }
-  }
-
-  if (colIndices.length === 0) {
-    SpreadsheetApp.getUi().alert('❌ Kolom 2024 tidak ditemukan di header DB_Iuran.');
-    return;
-  }
-
-  var totalRows = data.length - 1;
-  for (var r = 0; r < totalRows; r++) {
-    for (var i = 0; i < colIndices.length; i++) {
-      var colIdx = colIndices[i];
-      var isLunas = ((r + i) % 7 !== 0 && (r * 3 + i) % 11 !== 0);
-      sheet.getRange(r + 2, colIdx + 1).setValue(isLunas);
-    }
-  }
-
-  SpreadsheetApp.getUi().alert('✅ Selesai! Data dummy iuran tahun 2024 (Jan - Des) berhasil diisi untuk ' + totalRows + ' rumah.');
 }
 
 // ============================================================

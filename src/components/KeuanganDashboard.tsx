@@ -92,8 +92,8 @@ export default function KeuanganDashboard() {
   const kkSudahBayar = liveIuran ? liveIuran.totalLunas : 0;
   const progressIuran = liveIuran ? liveIuran.persenLunas : 0;
   const totalPemasukan = liveIuran ? liveIuran.totalNominal : (data?.totalPemasukan || 0);
-  const totalPengeluaran = data?.totalPengeluaran !== undefined ? data.totalPengeluaran : (liveIuran?.totalPengeluaran !== undefined ? liveIuran.totalPengeluaran : 1200000);
-  const saldoKasSaatIni = data?.saldoAkhir !== undefined ? data.saldoAkhir : (16000000 + totalPemasukan - totalPengeluaran);
+  const totalPengeluaran = data?.totalPengeluaran !== undefined ? data.totalPengeluaran : (liveIuran?.totalPengeluaran !== undefined ? liveIuran.totalPengeluaran : 0);
+  const saldoKasSaatIni = data?.saldoAkhir !== undefined ? data.saldoAkhir : (totalPemasukan - totalPengeluaran);
 
   // Daftar transaksi mutasi kas (100% dari spreadsheet)
   const transaksiList: TransaksiKeuangan[] = useMemo(() => {
