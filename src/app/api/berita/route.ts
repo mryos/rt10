@@ -1,9 +1,19 @@
 import { NextResponse } from 'next/server';
 
-const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbw3H1EvZq5Oq97SbZKiR110py_1AqWOCHX08h4iWfeEmbQqrwZinF4ho3OYfOSLrbQUEA/exec';
-const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_URL || DEFAULT_URL;
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET(request: Request) {
+  const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_URL;
+
+  // Jika tidak ada URL Apps Script khusus berita, kembalikan array kosong (karena spreadsheet baru hanya berisi kas)
+  if (!APPS_SCRIPT_URL) {
+    return NextResponse.json({
+      success: true,
+      data: [],
+    });
+  }
+
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
 
@@ -13,13 +23,13 @@ export async function GET(request: Request) {
       ? `${APPS_SCRIPT_URL}?action=${action}&id=${encodeURIComponent(id)}`
       : `${APPS_SCRIPT_URL}?action=${action}`;
 
-    const res = await fetch(url, { next: { revalidate: 60 }, redirect: 'follow' });
+    const res = await fetch(url, { cache: 'no-store', redirect: 'follow' });
     const data = await res.json();
     return NextResponse.json(data);
   } catch (error) {
     console.error('Error fetching berita:', error);
     return NextResponse.json(
-      { success: false, message: 'Gagal mengambil data berita' },
+      { success: false, message: 'Gagal mengambil data berita', data: [] },
       { status: 500 }
     );
   }
