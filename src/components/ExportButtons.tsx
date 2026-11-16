@@ -31,26 +31,90 @@ export default function ExportButtons({ data, period }: ExportButtonsProps) {
   };
 
   const exportPDF = async () => {
-    const html2canvas = (await import('html2canvas')).default;
     const { jsPDF } = await import('jspdf');
 
-    const element = document.getElementById('iuran-table');
-    if (!element) return;
+    const pdf = new jsPDF({
+      orientation: 'p',
+      unit: 'mm',
+      format: 'a4',
+      compress: true,
+    });
 
-    const canvas = await html2canvas(element, { scale: 2 });
-    const imgData = canvas.toDataURL('image/png');
-
-    const pdf = new jsPDF('p', 'mm', 'a4');
     const pageWidth = pdf.internal.pageSize.getWidth();
-    const imgWidth = pageWidth - 20;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 14;
+    const contentWidth = pageWidth - margin * 2;
 
+    // Header
+    pdf.setFillColor(15, 23, 42);
+    pdf.rect(0, 0, pageWidth, 5, 'F');
+
+    pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(14);
-    pdf.text(`Laporan Iuran Warga RT 10 - Periode ${period}`, 10, 15);
-    pdf.setFontSize(9);
-    pdf.setTextColor(120);
-    pdf.text(`Dicetak pada: ${new Date().toLocaleDateString('id-ID', { dateStyle: 'long' })}`, 10, 21);
-    pdf.addImage(imgData, 'PNG', 10, 26, imgWidth, imgHeight);
+    pdf.setTextColor(24, 24, 27);
+    pdf.text(`LAPORAN IURAN WARGA RT 10`, margin, 17);
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8.5);
+    pdf.setTextColor(100, 116, 139);
+    pdf.text(`Periode: ${period} — Dicetak pada: ${new Date().toLocaleDateString('id-ID', { dateStyle: 'full' })}`, margin, 23);
+
+    // Table Header
+    let tableY = 30;
+    pdf.setFillColor(241, 245, 249);
+    pdf.setDrawColor(203, 213, 225);
+    pdf.rect(margin, tableY, contentWidth, 6.5, 'FD');
+
+    pdf.setFontSize(7.5);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(51, 65, 85);
+    pdf.text('NO', margin + 3, tableY + 4.5);
+    pdf.text('NO. BLOK', margin + 18, tableY + 4.5);
+    pdf.text('NAMA WARGA', margin + 55, tableY + 4.5);
+    pdf.text('STATUS IURAN', pageWidth - margin - 3, tableY + 4.5, { align: 'right' });
+
+    tableY += 6.5;
+
+    data.forEach((row, idx) => {
+      if (tableY > pageHeight - 20) {
+        pdf.addPage();
+        tableY = 16;
+        pdf.setFillColor(241, 245, 249);
+        pdf.rect(margin, tableY, contentWidth, 6.5, 'FD');
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(7.5);
+        pdf.setTextColor(51, 65, 85);
+        pdf.text('NO', margin + 3, tableY + 4.5);
+        pdf.text('NO. BLOK', margin + 18, tableY + 4.5);
+        pdf.text('NAMA WARGA', margin + 55, tableY + 4.5);
+        pdf.text('STATUS IURAN', pageWidth - margin - 3, tableY + 4.5, { align: 'right' });
+        tableY += 6.5;
+      }
+
+      const isEven = idx % 2 === 0;
+      pdf.setFillColor(isEven ? 255 : 248, isEven ? 255 : 250, isEven ? 255 : 252);
+      pdf.setDrawColor(226, 232, 240);
+      pdf.rect(margin, tableY, contentWidth, 6, 'FD');
+
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7.5);
+      pdf.setTextColor(71, 85, 105);
+      pdf.text(String(idx + 1), margin + 3, tableY + 4.2);
+      pdf.text(row.noBlok, margin + 18, tableY + 4.2);
+      pdf.text(row.namaWarga, margin + 55, tableY + 4.2);
+
+      pdf.setFont('helvetica', 'bold');
+      if (row.status) {
+        pdf.setTextColor(22, 101, 52);
+        pdf.text('LUNAS', pageWidth - margin - 3, tableY + 4.2, { align: 'right' });
+      } else {
+        pdf.setTextColor(185, 28, 28);
+        pdf.text('BELUM BAYAR', pageWidth - margin - 3, tableY + 4.2, { align: 'right' });
+      }
+
+      tableY += 6;
+    });
+
     pdf.save(`Laporan_Iuran_${period.replace(' ', '_')}.pdf`);
   };
 

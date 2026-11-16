@@ -144,22 +144,9 @@ export default function KeuanganDashboard() {
     );
   }, [liveIuran, searchWarga]);
 
-  // Ekspor PDF Laporan Keuangan (Ringan & Cepat, Kompresi Optimal ~250-400 KB)
+  // Ekspor Dokumen Resmi PDF Vektor Asli (Super Ringan ~25-45 KB, Sangat Tajam & Cepat)
   const handleExportPDF = async () => {
-    const html2canvas = (await import('html2canvas')).default;
     const { jsPDF } = await import('jspdf');
-
-    const element = document.getElementById('laporan-keuangan-container');
-    if (!element) return;
-
-    // Gunakan scale 1.5 dan JPEG 0.8 agar ukuran file kecil (sebelumnya PNG mentah scale 2 membuat file sampai 12 MB)
-    const canvas = await html2canvas(element, {
-      scale: 1.5,
-      backgroundColor: '#F8FAFC',
-      useCORS: true,
-      logging: false,
-    });
-    const imgData = canvas.toDataURL('image/jpeg', 0.8);
 
     const pdf = new jsPDF({
       orientation: 'p',
@@ -170,21 +157,215 @@ export default function KeuanganDashboard() {
 
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = 8;
-    const imgWidth = pageWidth - margin * 2;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    const margin = 14;
+    const contentWidth = pageWidth - margin * 2;
 
-    pdf.setFontSize(13);
+    // 1. KOP RESMI LAPORAN KAS
+    pdf.setFillColor(15, 23, 42); // slate-900 accent bar
+    pdf.rect(0, 0, pageWidth, 5, 'F');
+
     pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(15);
     pdf.setTextColor(24, 24, 27);
-    pdf.text(`Laporan Keuangan RT 04 / RW 02 - Periode ${selectedPeriod}`, margin, 11);
+    pdf.text('LAPORAN KAS & KEUANGAN RT 10', margin, 17);
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8.5);
+    pdf.setTextColor(100, 116, 139);
+    pdf.text(`Rukun Tetangga 04 / Rukun Warga 02 — Periode: ${selectedPeriod}`, margin, 23);
+    pdf.text(
+      `Dokumen resmi transparansi kas warga. Dicetak pada: ${new Date().toLocaleDateString('id-ID', {
+        dateStyle: 'full',
+      })}`,
+      margin,
+      28
+    );
+
+    // Garis Pemisah
+    pdf.setDrawColor(226, 232, 240);
+    pdf.setLineWidth(0.4);
+    pdf.line(margin, 31, pageWidth - margin, 31);
+
+    // 2. KARTU STATISTIK (3 BOXES)
+    const cardY = 35;
+    const cardH = 22;
+    const cardGap = 4;
+    const cardW = (contentWidth - cardGap * 2) / 3;
+
+    // Box 1: Saldo Kas Saat Ini
+    pdf.setFillColor(248, 250, 252);
+    pdf.setDrawColor(226, 232, 240);
+    pdf.roundedRect(margin, cardY, cardW, cardH, 2, 2, 'FD');
+    pdf.setFontSize(7.5);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(100, 116, 139);
+    pdf.text('Saldo Kas Saat Ini', margin + 3.5, cardY + 6.5);
+    pdf.setFontSize(10.5);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(15, 23, 42);
+    pdf.text(formatRupiah(saldoKasSaatIni), margin + 3.5, cardY + 16);
+
+    // Box 2: Total Pemasukan
+    const card2X = margin + cardW + cardGap;
+    pdf.setFillColor(240, 253, 244);
+    pdf.setDrawColor(187, 247, 208);
+    pdf.roundedRect(card2X, cardY, cardW, cardH, 2, 2, 'FD');
+    pdf.setFontSize(7.5);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(22, 101, 52);
+    pdf.text('Total Pemasukan', card2X + 3.5, cardY + 6.5);
+    pdf.setFontSize(10.5);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(21, 128, 61);
+    pdf.text(`+ ${formatRupiah(totalPemasukan)}`, card2X + 3.5, cardY + 16);
+
+    // Box 3: Total Pengeluaran
+    const card3X = card2X + cardW + cardGap;
+    pdf.setFillColor(254, 242, 242);
+    pdf.setDrawColor(254, 202, 202);
+    pdf.roundedRect(card3X, cardY, cardW, cardH, 2, 2, 'FD');
+    pdf.setFontSize(7.5);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(153, 27, 27);
+    pdf.text('Total Pengeluaran', card3X + 3.5, cardY + 6.5);
+    pdf.setFontSize(10.5);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(185, 28, 28);
+    pdf.text(`- ${formatRupiah(totalPengeluaran)}`, card3X + 3.5, cardY + 16);
+
+    // 3. STATUS IURAN WARGA
+    const secY = 62;
+    pdf.setFontSize(9.5);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(30, 41, 59);
+    pdf.text('Status Pembayaran Iuran Warga', margin, secY);
+
+    pdf.setFillColor(248, 250, 252);
+    pdf.setDrawColor(226, 232, 240);
+    pdf.roundedRect(margin, secY + 3, contentWidth, 14, 2, 2, 'FD');
 
     pdf.setFontSize(8);
     pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(113, 113, 122);
-    pdf.text(`Dokumen resmi transparansi kas warga RT 10. Dicetak pada: ${new Date().toLocaleDateString('id-ID', { dateStyle: 'full' })}`, margin, 16);
+    pdf.setTextColor(71, 85, 105);
+    pdf.text(
+      `Progres: ${kkSudahBayar} dari ${totalKK} Rumah Sudah Terverifikasi (${progressIuran}%)`,
+      margin + 3.5,
+      secY + 8.5
+    );
 
-    pdf.addImage(imgData, 'JPEG', margin, 20, imgWidth, Math.min(imgHeight, pageHeight - 25), undefined, 'FAST');
+    // Progress bar visual
+    const barW = contentWidth - 7;
+    const fillW = (barW * Math.min(progressIuran, 100)) / 100;
+    pdf.setFillColor(226, 232, 240);
+    pdf.rect(margin + 3.5, secY + 11.5, barW, 2.5, 'F');
+    pdf.setFillColor(22, 163, 74);
+    if (fillW > 0) {
+      pdf.rect(margin + 3.5, secY + 11.5, fillW, 2.5, 'F');
+    }
+
+    // 4. TABEL RIWAYAT MUTASI KAS
+    let tableY = secY + 23;
+    pdf.setFontSize(9.5);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(30, 41, 59);
+    pdf.text('Rincian Mutasi Transaksi Kas', margin, tableY);
+
+    tableY += 4;
+    // Table Header
+    pdf.setFillColor(241, 245, 249);
+    pdf.setDrawColor(203, 213, 225);
+    pdf.rect(margin, tableY, contentWidth, 6.5, 'FD');
+
+    pdf.setFontSize(7.5);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(51, 65, 85);
+    pdf.text('TANGGAL', margin + 3, tableY + 4.5);
+    pdf.text('KETERANGAN TRANSAKSI', margin + 30, tableY + 4.5);
+    pdf.text('KATEGORI', margin + 115, tableY + 4.5);
+    pdf.text('NOMINAL', pageWidth - margin - 3, tableY + 4.5, { align: 'right' });
+
+    tableY += 6.5;
+
+    // Rows
+    const rows = transaksiList;
+    if (rows.length === 0) {
+      pdf.setFillColor(255, 255, 255);
+      pdf.setDrawColor(226, 232, 240);
+      pdf.rect(margin, tableY, contentWidth, 7, 'FD');
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7.5);
+      pdf.setTextColor(148, 163, 184);
+      pdf.text('Belum ada data mutasi pada periode ini', margin + 4, tableY + 4.8);
+      tableY += 7;
+    } else {
+      rows.forEach((trx, idx) => {
+        if (tableY > pageHeight - 35) {
+          pdf.addPage();
+          tableY = 16;
+          // Re-draw header on new page
+          pdf.setFillColor(241, 245, 249);
+          pdf.setDrawColor(203, 213, 225);
+          pdf.rect(margin, tableY, contentWidth, 6.5, 'FD');
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(7.5);
+          pdf.setTextColor(51, 65, 85);
+          pdf.text('TANGGAL', margin + 3, tableY + 4.5);
+          pdf.text('KETERANGAN TRANSAKSI', margin + 30, tableY + 4.5);
+          pdf.text('KATEGORI', margin + 115, tableY + 4.5);
+          pdf.text('NOMINAL', pageWidth - margin - 3, tableY + 4.5, { align: 'right' });
+          tableY += 6.5;
+        }
+
+        const isEven = idx % 2 === 0;
+        pdf.setFillColor(isEven ? 255 : 248, isEven ? 255 : 250, isEven ? 255 : 252);
+        pdf.setDrawColor(226, 232, 240);
+        pdf.rect(margin, tableY, contentWidth, 6.5, 'FD');
+
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(7.5);
+        pdf.setTextColor(71, 85, 105);
+        pdf.text(trx.tanggal, margin + 3, tableY + 4.5);
+
+        const ket = trx.keterangan.length > 55 ? trx.keterangan.substring(0, 52) + '...' : trx.keterangan;
+        pdf.text(ket, margin + 30, tableY + 4.5);
+
+        pdf.text(trx.kategori, margin + 115, tableY + 4.5);
+
+        pdf.setFont('helvetica', 'bold');
+        if (trx.tipe === 'masuk') {
+          pdf.setTextColor(22, 101, 52);
+          pdf.text(`+ ${formatRupiah(trx.nominal)}`, pageWidth - margin - 3, tableY + 4.5, { align: 'right' });
+        } else {
+          pdf.setTextColor(185, 28, 28);
+          pdf.text(`- ${formatRupiah(trx.nominal)}`, pageWidth - margin - 3, tableY + 4.5, { align: 'right' });
+        }
+
+        tableY += 6.5;
+      });
+    }
+
+    // 5. FOOTER RESMI
+    const footerY = Math.max(tableY + 10, pageHeight - 28);
+    if (footerY + 22 <= pageHeight) {
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7);
+      pdf.setTextColor(148, 163, 184);
+      pdf.text(
+        'Catatan: Laporan resmi ini disinkronkan secara langsung dari Google Sheets RT 10.',
+        margin,
+        footerY
+      );
+
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(7.5);
+      pdf.setTextColor(51, 65, 85);
+      pdf.text('Pengurus RT 10 / RW 02', pageWidth - margin - 42, footerY + 6);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7);
+      pdf.setTextColor(100, 116, 139);
+      pdf.text('Seksi Keuangan & Bendahara', pageWidth - margin - 42, footerY + 10.5);
+    }
+
     pdf.save(`Laporan_Keuangan_RT10_${selectedPeriod.replace(/\s+/g, '_')}.pdf`);
   };
 
