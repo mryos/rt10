@@ -674,34 +674,94 @@ function getIuran2026Data() {
 }
 
 // ============================================================
-// KEUANGAN DATA
+// KEUANGAN DATA (Mendukung Pembacaan dari RT10 : 2026 atau DB_Keuangan)
 // ============================================================
 function getKeuanganData(year, month) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName('DB_Keuangan');
-  if (!sheet) {
-    return { success: false, message: 'Sheet DB_Keuangan belum ada. Menggunakan mode kalkulasi otomatis.' };
+  var sheetKeu = ss.getSheetByName('DB_Keuangan');
+
+  // Jika ada sheet terpisah DB_Keuangan
+  if (sheetKeu) {
+    var data = sheetKeu.getDataRange().getValues();
+    var result = [];
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] === '' || data[i][0] === null) continue;
+      result.push({
+        id: data[i][0].toString(),
+        tanggal: data[i][1] instanceof Date ? Utilities.formatDate(data[i][1], 'Asia/Jakarta', 'dd MMM yyyy') : data[i][1].toString(),
+        tipe: data[i][2].toString(),
+        kategori: data[i][3].toString(),
+        keterangan: data[i][4].toString(),
+        nominal: Number(data[i][5]) || 0,
+        saldoSetelah: Number(data[i][6]) || 0,
+        penanggungJawab: (data[i][7] || '').toString(),
+        noBukti: (data[i][8] || '').toString()
+      });
+    }
+    return { success: true, data: result };
   }
 
-  var data = sheet.getDataRange().getValues();
-  var result = [];
+  // Jika di sheet utama RT10 : 2026 terdapat baris pengeluaran kas
+  var sheetMain = getSheetIuran(ss);
+  if (sheetMain) {
+    var rawData = sheetMain.getDataRange().getValues();
+    var foundPemasukan = false;
+    var expenseTx = [];
+    var monthNorm = (month || '').toString().toLowerCase().trim();
 
-  for (var i = 1; i < data.length; i++) {
-    if (data[i][0] === '' || data[i][0] === null) continue;
-    result.push({
-      id: data[i][0].toString(),
-      tanggal: data[i][1] instanceof Date ? Utilities.formatDate(data[i][1], 'Asia/Jakarta', 'dd MMM yyyy') : data[i][1].toString(),
-      tipe: data[i][2].toString(),
-      kategori: data[i][3].toString(),
-      keterangan: data[i][4].toString(),
-      nominal: Number(data[i][5]) || 0,
-      saldoSetelah: Number(data[i][6]) || 0,
-      penanggungJawab: (data[i][7] || '').toString(),
-      noBukti: (data[i][8] || '').toString()
-    });
+    for (var r = 0; r < rawData.length; r++) {
+      var col0 = (rawData[r][0] || '').toString();
+      var col1 = (rawData[r][1] || '').toString();
+
+      if (col0.toLowerCase().includes('total pemasukan') || col0.toLowerCase().includes('total pemasukkan')) {
+        foundPemasukan = true;
+        continue;
+      }
+
+      if (foundPemasukan) {
+        var label = col1 || col0;
+        if (label && !label.toLowerCase().includes('total pemasukan')) {
+          var itemLabel = (col0.toLowerCase().includes('pengeluaran') || col0.toLowerCase().includes('pemgeluaran')) ? (col1 || 'Pengeluaran Kas') : label;
+          
+          // Cari kolom bulan
+          var monthCols = ['jan', 'feb', 'mar', 'apr', 'mei', 'jun', 'jul', 'agu', 'sep', 'okt', 'nov', 'des'];
+          var colIdx = -1;
+          for (var m = 0; m < monthCols.length; m++) {
+            if (monthNorm.indexOf(monthCols[m]) !== -1) {
+              colIdx = m + 2;
+              break;
+            }
+          }
+
+          var nom = 0;
+          if (colIdx !== -1 && colIdx < rawData[r].length) {
+            nom = parseDuesValue(rawData[r][colIdx]).nominal;
+          } else {
+            // Ambil total tahunan (col 14)
+            nom = parseDuesValue(rawData[r][14]).nominal;
+          }
+
+          if (nom > 0) {
+            expenseTx.push({
+              id: 'TRX-EXP-' + r,
+              tanggal: '2026',
+              tipe: 'keluar',
+              kategori: itemLabel.toLowerCase().includes('keamanan') ? 'Keamanan' : 'Operasional',
+              keterangan: 'Pembayaran ' + itemLabel + ' RT 10',
+              nominal: nom,
+              saldoSetelah: 0,
+              penanggungJawab: 'Bendahara / Pengurus RT',
+              noBukti: 'NOTA-' + r
+            });
+          }
+        }
+      }
+    }
+
+    return { success: true, data: expenseTx };
   }
 
-  return { success: true, data: result };
+  return { success: false, message: 'Data keuangan tidak ditemukan' };
 }
 
 // ============================================================

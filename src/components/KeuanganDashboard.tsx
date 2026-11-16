@@ -88,8 +88,8 @@ export default function KeuanganDashboard() {
   const kkSudahBayar = liveIuran ? liveIuran.totalLunas : 0;
   const progressIuran = liveIuran ? liveIuran.persenLunas : 0;
   const totalPemasukan = liveIuran ? liveIuran.totalNominal : (data?.totalPemasukan || 0);
-  const totalPengeluaran = data?.totalPengeluaran || (selectedPeriod === 'Semua Periode 2026' ? 9000000 : 1600000);
-  const saldoKasSaatIni = data?.saldoAkhir || (16000000 + totalPemasukan - totalPengeluaran);
+  const totalPengeluaran = data?.totalPengeluaran !== undefined ? data.totalPengeluaran : (liveIuran?.totalPengeluaran !== undefined ? liveIuran.totalPengeluaran : 1200000);
+  const saldoKasSaatIni = data?.saldoAkhir !== undefined ? data.saldoAkhir : (16000000 + totalPemasukan - totalPengeluaran);
 
   // Daftar transaksi mutasi kas
   const transaksiList: TransaksiKeuangan[] = useMemo(() => {
@@ -166,12 +166,18 @@ export default function KeuanganDashboard() {
   const radius = (donutSize - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
 
-  const donutSlices = [
-    { label: 'Sosial', percent: 15, color: '#2563EB' },
-    { label: 'Operasional', percent: 20, color: '#F59E0B' },
-    { label: 'Keamanan', percent: 30, color: '#16A34A' },
-    { label: 'Kebersihan', percent: 35, color: '#EA580C' },
-  ];
+  const donutSlices = useMemo(() => {
+    if (data?.alokasiPengeluaran && data.alokasiPengeluaran.length > 0) {
+      return data.alokasiPengeluaran.map((al) => ({
+        label: al.kategori,
+        percent: al.persentase,
+        color: al.warna || '#16A34A',
+      }));
+    }
+    return [
+      { label: 'Keamanan', percent: 100, color: '#16A34A' },
+    ];
+  }, [data]);
 
   let cumulativeOffset = 0;
 
@@ -305,60 +311,65 @@ export default function KeuanganDashboard() {
           </h2>
 
           <div className="flex items-center justify-between w-full max-w-sm mx-auto py-2">
-            {/* Label Kiri: Kebersihan & Keamanan */}
-            <div className="flex flex-col justify-between h-28 text-left">
-              <div>
-                <span className="text-xs text-zinc-600 font-medium block">Kebersihan</span>
-                <span className="text-sm font-bold text-zinc-950">35%</span>
-              </div>
-              <div>
-                <span className="text-xs text-zinc-600 font-medium block">Keamanan</span>
-                <span className="text-sm font-bold text-zinc-950">30%</span>
-              </div>
+            {/* Label Kiri */}
+            <div className="flex flex-col justify-around h-28 text-left">
+              {donutSlices.slice(0, Math.ceil(donutSlices.length / 2)).map((item, idx) => (
+                <div key={idx} className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                  <div>
+                    <span className="text-xs text-zinc-600 font-medium block">{item.label}</span>
+                    <span className="text-sm font-bold text-zinc-950">{item.percent}%</span>
+                  </div>
+                </div>
+              ))}
             </div>
 
             {/* Donut Chart SVG */}
-            <div className="relative flex items-center justify-center">
+            <div className="relative flex items-center justify-center shrink-0">
               <svg
                 width={donutSize}
                 height={donutSize}
                 viewBox={`0 0 ${donutSize} ${donutSize}`}
                 className="-rotate-90"
               >
-                {donutSlices.map((item, idx) => {
-                  const sliceDash = (item.percent / 100) * circumference;
-                  const strokeDasharray = `${sliceDash} ${circumference}`;
-                  const strokeDashoffset = -cumulativeOffset;
-                  cumulativeOffset += sliceDash;
+                {(() => {
+                  let offset = 0;
+                  return donutSlices.map((item, idx) => {
+                    const sliceDash = (item.percent / 100) * circumference;
+                    const strokeDasharray = `${sliceDash} ${circumference}`;
+                    const strokeDashoffset = -offset;
+                    offset += sliceDash;
 
-                  return (
-                    <circle
-                      key={idx}
-                      cx={donutSize / 2}
-                      cy={donutSize / 2}
-                      r={radius}
-                      fill="transparent"
-                      stroke={item.color}
-                      strokeWidth={strokeWidth}
-                      strokeDasharray={strokeDasharray}
-                      strokeDashoffset={strokeDashoffset}
-                      strokeLinecap="butt"
-                    />
-                  );
-                })}
+                    return (
+                      <circle
+                        key={idx}
+                        cx={donutSize / 2}
+                        cy={donutSize / 2}
+                        r={radius}
+                        fill="transparent"
+                        stroke={item.color}
+                        strokeWidth={strokeWidth}
+                        strokeDasharray={strokeDasharray}
+                        strokeDashoffset={strokeDashoffset}
+                        strokeLinecap="butt"
+                      />
+                    );
+                  });
+                })()}
               </svg>
             </div>
 
-            {/* Label Kanan: Sosial & Operasional */}
-            <div className="flex flex-col justify-between h-28 text-right">
-              <div>
-                <span className="text-xs text-zinc-600 font-medium block">Sosial</span>
-                <span className="text-sm font-bold text-zinc-950">15%</span>
-              </div>
-              <div>
-                <span className="text-xs text-zinc-600 font-medium block">Operasional</span>
-                <span className="text-sm font-bold text-zinc-950">20%</span>
-              </div>
+            {/* Label Kanan */}
+            <div className="flex flex-col justify-around h-28 text-right">
+              {donutSlices.slice(Math.ceil(donutSlices.length / 2)).map((item, idx) => (
+                <div key={idx} className="flex items-center justify-end gap-1.5">
+                  <div>
+                    <span className="text-xs text-zinc-600 font-medium block">{item.label}</span>
+                    <span className="text-sm font-bold text-zinc-950">{item.percent}%</span>
+                  </div>
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                </div>
+              ))}
             </div>
           </div>
         </div>

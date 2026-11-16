@@ -36,7 +36,7 @@ export async function GET(request: Request) {
     const monthLabel = MONTH_NAMES_MAP[monthParam] || monthParam.toUpperCase();
     const periodTitle = monthParam === 'all' ? `Tahun ${year}` : `${monthLabel} ${year}`;
 
-    // 1. Hitung performa tiap blok (70 rumah terbagi 7 blok) langsung dari baris spreadsheet
+    // 1. Hitung performa tiap blok (70 rumah terbagi 7 blok)
     const performaBlok: PerformaBlokKeuangan[] = BLOK_PREFIXES.map((blokKey) => {
       const blokLetter = blokKey.replace('Blok ', '').trim();
       const blokRows = liveSummary.data.filter(
@@ -59,103 +59,81 @@ export async function GET(request: Request) {
       };
     });
 
-    const totalPemasukanIuran = liveSummary.totalNominal;
+    const totalPemasukanIuran = liveSummary.totalPemasukan;
+    const totalPengeluaranKas = liveSummary.totalPengeluaran;
     const totalKKBayar = liveSummary.totalLunas;
     const totalRumah = liveSummary.totalRumah || 70;
     const persenKepatuhan = liveSummary.persenLunas;
 
-    // 2. Susun data transaksi mutasi kas yang sinkron dengan penerimaan iuran
+    // 2. Susun data transaksi mutasi kas yang 100% sinkron dengan spreadsheet
     const transaksiList: TransaksiKeuangan[] = [];
 
-    // Transaksi Penerimaan Iuran (jika ada yang bayar pada periode ini)
+    // Mutasi Masuk: Realisasi Iuran Warga
     if (totalPemasukanIuran > 0) {
       transaksiList.push({
         id: `TRX-${year}-${monthParam.toUpperCase()}-01`,
-        tanggal: monthParam === 'all' ? `Jan - Des ${year}` : `15 ${monthLabel} ${year}`,
+        tanggal: monthParam === 'all' ? `Jan - Des ${year}` : `10 ${monthLabel} ${year}`,
         kategori: 'Iuran Wajib Warga',
         keterangan: `Penerimaan iuran kas warga RT 10 (${totalKKBayar} dari ${totalRumah} KK terverifikasi)`,
         tipe: 'masuk',
         nominal: totalPemasukanIuran,
-        saldoSetelah: 18450000 + totalPemasukanIuran,
+        saldoSetelah: 16000000 + totalPemasukanIuran,
         penanggungJawab: 'Bendahara RT',
         noBukti: `KW-${monthParam.toUpperCase()}/IUR/${year}`,
       });
     }
 
-    // Transaksi pengeluaran operasional realistis per bulan
-    const pengeluaranBulanan = [
-      {
-        id: `TRX-${year}-${monthParam.toUpperCase()}-02`,
-        tanggal: `20 ${monthLabel} ${year}`,
-        kategori: 'Kebersihan Lingkungan',
-        keterangan: 'Pemeliharaan kebersihan rutin & angkut sampah lingkungan RT 10',
-        tipe: 'keluar' as const,
-        nominal: monthParam === 'all' ? 4200000 : 750000,
-        saldoSetelah: 18450000,
-        penanggungJawab: 'Sie Kebersihan',
-        noBukti: `NOTA-KBR-${monthParam.toUpperCase()}`,
-      },
-      {
-        id: `TRX-${year}-${monthParam.toUpperCase()}-03`,
-        tanggal: `25 ${monthLabel} ${year}`,
-        kategori: 'Keamanan Lingkungan',
-        keterangan: 'Honor & operasional pos ronda malam warga RT 10',
-        tipe: 'keluar' as const,
-        nominal: monthParam === 'all' ? 3600000 : 600000,
-        saldoSetelah: 17850000,
-        penanggungJawab: 'Sie Keamanan',
-        noBukti: `NOTA-SEC-${monthParam.toUpperCase()}`,
-      },
-      {
-        id: `TRX-${year}-${monthParam.toUpperCase()}-04`,
-        tanggal: `28 ${monthLabel} ${year}`,
-        kategori: 'Operasional',
-        keterangan: 'Perlengkapan administrasi dan lampu penerangan jalan',
-        tipe: 'keluar' as const,
-        nominal: monthParam === 'all' ? 1200000 : 250000,
-        saldoSetelah: 17600000,
-        penanggungJawab: 'Sie Sarpras',
-        noBukti: `NOTA-OPS-${monthParam.toUpperCase()}`,
-      },
-    ];
+    // Mutasi Keluar: Realisasi Pengeluaran dari Spreadsheet
+    let cumulativeExpense = 0;
+    const activeExpenseItems = liveSummary.pengeluaranItems.filter((it) => it.nominal > 0);
 
-    transaksiList.push(...pengeluaranBulanan);
-
-    const totalPemasukan = transaksiList
-      .filter((t) => t.tipe === 'masuk')
-      .reduce((sum, t) => sum + t.nominal, 0);
-
-    const totalPengeluaran = transaksiList
-      .filter((t) => t.tipe === 'keluar')
-      .reduce((sum, t) => sum + t.nominal, 0);
+    activeExpenseItems.forEach((it, idx) => {
+      cumulativeExpense += it.nominal;
+      transaksiList.push({
+        id: `TRX-${year}-${monthParam.toUpperCase()}-EXP-${idx + 1}`,
+        tanggal: monthParam === 'all' ? `Jan - Des ${year}` : `${15 + idx * 3} ${monthLabel} ${year}`,
+        kategori: it.kategori,
+        keterangan: `Pembayaran ${it.nama} RT 10 (${periodTitle})`,
+        tipe: 'keluar',
+        nominal: it.nominal,
+        saldoSetelah: 16000000 + totalPemasukanIuran - cumulativeExpense,
+        penanggungJawab: it.kategori === 'Keamanan' ? 'Sie Keamanan' : 'Sie Operasional',
+        noBukti: `NOTA-${it.kategori.substring(0, 3).toUpperCase()}-${monthParam.toUpperCase()}`,
+      });
+    });
 
     const saldoAwal = 16000000;
-    const saldoAkhir = saldoAwal + totalPemasukan - totalPengeluaran;
+    const saldoAkhir = saldoAwal + totalPemasukanIuran - totalPengeluaranKas;
 
-    // Alokasi pengeluaran
-    const alokasiPengeluaran: KategoriAlokasi[] = [
-      {
-        kategori: 'Kebersihan',
-        nominal: Math.round(totalPengeluaran * 0.45),
-        persentase: 45,
-        warna: '#EA580C',
-        deskripsi: 'Kebersihan lingkungan, saluran air, dan pembuangan sampah',
-      },
-      {
+    // 3. Pos Alokasi Pengeluaran (Dihitung langsung dari data spreadsheet)
+    const categoryTotals: { [key: string]: number } = {};
+    activeExpenseItems.forEach((it) => {
+      categoryTotals[it.kategori] = (categoryTotals[it.kategori] || 0) + it.nominal;
+    });
+
+    const colorPalette = ['#16A34A', '#2563EB', '#F59E0B', '#EA580C', '#8B5CF6'];
+    const alokasiPengeluaran: KategoriAlokasi[] = Object.keys(categoryTotals).map((catName, idx) => {
+      const catNominal = categoryTotals[catName];
+      const pct = totalPengeluaranKas > 0 ? Math.round((catNominal / totalPengeluaranKas) * 100) : 0;
+      return {
+        kategori: catName,
+        nominal: catNominal,
+        persentase: pct,
+        warna: colorPalette[idx % colorPalette.length],
+        deskripsi: `Realisasi belanja pos ${catName} sesuai spreadsheet`,
+      };
+    });
+
+    // Fallback jika pengeluaran 0 pada bulan tertentu
+    if (alokasiPengeluaran.length === 0) {
+      alokasiPengeluaran.push({
         kategori: 'Keamanan',
-        nominal: Math.round(totalPengeluaran * 0.35),
-        persentase: 35,
+        nominal: 0,
+        persentase: 100,
         warna: '#16A34A',
-        deskripsi: 'Operasional pos ronda dan perlengkapan satpam',
-      },
-      {
-        kategori: 'Operasional',
-        nominal: Math.round(totalPengeluaran * 0.2),
-        persentase: 20,
-        warna: '#F59E0B',
-        deskripsi: 'Lampu PJU, pemeliharaan sarana umum dan ATK',
-      },
-    ];
+        deskripsi: 'Belum ada pengeluaran kas dicatat pada periode ini',
+      });
+    }
 
     const alokasiPemasukan: KategoriAlokasi[] = [
       {
@@ -172,11 +150,11 @@ export async function GET(request: Request) {
       tahun: year,
       saldoAwal,
       saldoBulanLalu: saldoAwal,
-      selisihBulanLalu: totalPemasukan - totalPengeluaran,
-      totalPemasukan,
-      totalPengeluaran,
+      selisihBulanLalu: totalPemasukanIuran - totalPengeluaranKas,
+      totalPemasukan: totalPemasukanIuran,
+      totalPengeluaran: totalPengeluaranKas,
       saldoAkhir,
-      surplusDefisit: totalPemasukan - totalPengeluaran,
+      surplusDefisit: totalPemasukanIuran - totalPengeluaranKas,
       targetIuran: totalRumah * 60000,
       realisasiIuran: totalPemasukanIuran,
       persenKepatuhan,
