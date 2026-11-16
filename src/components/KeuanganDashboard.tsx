@@ -11,6 +11,8 @@ export default function KeuanganDashboard() {
     totalRumah: number;
     totalLunas: number;
     totalNominal: number;
+    totalPengeluaran?: number;
+    pengeluaranItems?: { nama: string; kategori: string; nominal: number }[];
     persenLunas: number;
     data: ResidentDues[];
   } | null>(null);
@@ -59,6 +61,8 @@ export default function KeuanganDashboard() {
           totalRumah: jsonIuran.totalRumah || (jsonIuran.data ? jsonIuran.data.length : 70),
           totalLunas: jsonIuran.totalLunas !== undefined ? jsonIuran.totalLunas : 0,
           totalNominal: jsonIuran.totalNominal !== undefined ? jsonIuran.totalNominal : 0,
+          totalPengeluaran: jsonIuran.totalPengeluaran !== undefined ? jsonIuran.totalPengeluaran : 0,
+          pengeluaranItems: jsonIuran.pengeluaranItems || [],
           persenLunas: jsonIuran.persenLunas !== undefined ? jsonIuran.persenLunas : 0,
           data: jsonIuran.data || [],
         });
@@ -91,17 +95,17 @@ export default function KeuanganDashboard() {
   const totalPengeluaran = data?.totalPengeluaran !== undefined ? data.totalPengeluaran : (liveIuran?.totalPengeluaran !== undefined ? liveIuran.totalPengeluaran : 1200000);
   const saldoKasSaatIni = data?.saldoAkhir !== undefined ? data.saldoAkhir : (16000000 + totalPemasukan - totalPengeluaran);
 
-  // Daftar transaksi mutasi kas
+  // Daftar transaksi mutasi kas (100% dari spreadsheet)
   const transaksiList: TransaksiKeuangan[] = useMemo(() => {
     if (data?.transaksi && data.transaksi.length > 0) {
       return data.transaksi;
     }
 
-    const defaultTx: TransaksiKeuangan[] = [];
+    const list: TransaksiKeuangan[] = [];
     if (totalPemasukan > 0) {
-      defaultTx.push({
+      list.push({
         id: 'TRX-2026-IUR',
-        tanggal: `15 ${selectedPeriod}`,
+        tanggal: `10 ${selectedPeriod}`,
         kategori: 'Iuran Wajib Warga',
         keterangan: `Penerimaan iuran warga RT 10 (${kkSudahBayar} dari ${totalKK} KK terverifikasi)`,
         tipe: 'masuk',
@@ -111,19 +115,24 @@ export default function KeuanganDashboard() {
         noBukti: `KW-IUR-2026`,
       });
     }
-    defaultTx.push({
-      id: 'TRX-2026-OPS',
-      tanggal: `25 ${selectedPeriod}`,
-      kategori: 'Operasional',
-      keterangan: 'Pemeliharaan kebersihan & operasional pos keamanan',
-      tipe: 'keluar',
-      nominal: totalPengeluaran,
-      saldoSetelah: saldoKasSaatIni,
-      penanggungJawab: 'Sie Sarpras & Keamanan',
-      noBukti: `NOTA-OPS-2026`,
-    });
-    return defaultTx;
-  }, [data, totalPemasukan, totalPengeluaran, saldoKasSaatIni, kkSudahBayar, totalKK, selectedPeriod]);
+
+    if (liveIuran?.pengeluaranItems && liveIuran.pengeluaranItems.length > 0) {
+      liveIuran.pengeluaranItems.filter(it => it.nominal > 0).forEach((it, idx) => {
+        list.push({
+          id: `TRX-2026-EXP-${idx + 1}`,
+          tanggal: `15 ${selectedPeriod}`,
+          kategori: it.kategori,
+          keterangan: `Pembayaran ${it.nama} RT 10`,
+          tipe: 'keluar',
+          nominal: it.nominal,
+          saldoSetelah: saldoKasSaatIni,
+          penanggungJawab: it.kategori === 'Keamanan' ? 'Sie Keamanan' : 'Sie Operasional',
+          noBukti: `NOTA-${idx + 1}`,
+        });
+      });
+    }
+    return list;
+  }, [data, totalPemasukan, liveIuran, saldoKasSaatIni, kkSudahBayar, totalKK, selectedPeriod]);
 
   // Filter daftar warga untuk modal/tabel rincian
   const filteredWarga = useMemo(() => {
@@ -446,11 +455,18 @@ export default function KeuanganDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
-              {transaksiList.map((item) => {
-                const isMasuk = item.tipe === 'masuk';
+              {transaksiList.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-zinc-400 text-xs sm:text-sm">
+                    Belum ada riwayat transaksi kas pada periode {selectedPeriod}
+                  </td>
+                </tr>
+              ) : (
+                transaksiList.map((item) => {
+                  const isMasuk = item.tipe === 'masuk';
 
-                return (
-                  <tr key={item.id} className="hover:bg-zinc-50/60 transition-colors">
+                  return (
+                    <tr key={item.id} className="hover:bg-zinc-50/60 transition-colors">
                     <td className="py-3.5 px-4 text-zinc-800 font-medium whitespace-nowrap">
                       {item.tanggal}
                     </td>
@@ -505,7 +521,8 @@ export default function KeuanganDashboard() {
                     </td>
                   </tr>
                 );
-              })}
+              })
+            )}
             </tbody>
           </table>
         </div>

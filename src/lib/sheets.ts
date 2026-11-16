@@ -219,7 +219,7 @@ export async function fetchLiveSpreadsheetIuran(periodQuery: string): Promise<Sh
       nominal = parseNominal(exp.cols[targetCol]);
     }
 
-    if (nominal > 0 || isAll2026) {
+    if (nominal > 0) {
       totalPengeluaran += nominal;
       pengeluaranItems.push({
         nama: exp.label,
