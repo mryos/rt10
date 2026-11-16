@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { RingkasanKeuangan, TransaksiKeuangan, KategoriAlokasi, PerformaBlokKeuangan } from '@/lib/types';
+import { fetchLiveSpreadsheetIuran } from '@/lib/sheets';
 
 const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbw3H1EvZq5Oq97SbZKiR110py_1AqWOCHX08h4iWfeEmbQqrwZinF4ho3OYfOSLrbQUEA/exec';
 const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_URL || DEFAULT_URL;
@@ -8,10 +9,10 @@ const NOMINAL_IURAN_PER_RUMAH = 50000; // Rp 50.000 / bulan
 
 // Definisi 70 rumah dalam 7 blok
 const BLOK_CONFIG: { [key: string]: number } = {
-  'Blok A': 10, // A3-A12
-  'Blok B': 11, // B1-B11
+  'Blok A': 10, // A1, A3-A11
+  'Blok B': 10, // B1-B10
   'Blok C': 14, // C1-C14
-  'Blok D': 5,  // D3-D7
+  'Blok D': 6,  // D3-D5, D7-D9
   'Blok E': 7,  // E1-E7
   'Blok F': 14, // F1-F14
   'Blok G': 9,  // G1-G9
@@ -29,7 +30,7 @@ export async function GET(request: Request) {
   const year = parseInt(yearParam, 10) || 2026;
 
   try {
-    // 1. Coba ambil data iuran 2026 dari Apps Script untuk sinkronisasi live
+    // 1. Coba ambil data iuran 2026 dari Apps Script atau langsung dari spreadsheet live
     let liveIuranData: { noBlok: string; status: boolean; nominal?: number }[] | null = null;
     const testPeriod = monthParam === 'all' ? `2026` : `${monthParam} ${year}`;
 
@@ -39,11 +40,22 @@ export async function GET(request: Request) {
         { next: { revalidate: 30 }, redirect: 'follow' }
       );
       const jsonIuran = await resIuran.json();
-      if (jsonIuran && jsonIuran.success && Array.isArray(jsonIuran.data)) {
+      if (jsonIuran && jsonIuran.success && Array.isArray(jsonIuran.data) && jsonIuran.data.length > 0) {
         liveIuranData = jsonIuran.data;
       }
     } catch {
-      // fallback jika offline atau tanpa koneksi
+      // lanjut ke sinkronisasi direct spreadsheet
+    }
+
+    if (!liveIuranData) {
+      try {
+        const liveSummary = await fetchLiveSpreadsheetIuran(testPeriod);
+        if (liveSummary && liveSummary.data && liveSummary.data.length > 0) {
+          liveIuranData = liveSummary.data;
+        }
+      } catch {
+        // fallback
+      }
     }
 
     // 2. Hitung performa 7 Blok (70 Rumah)

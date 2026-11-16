@@ -1,6 +1,6 @@
 // ============================================================
 // GOOGLE APPS SCRIPT - Portal RT Management API & Auto Setup
-// Spreadsheet ID: 1sTcyZpkS5JUirU5GDHYpee0XEh4wqXOr3mLGUWJox-E
+// Spreadsheet ID: 1PYmo1HrgNpETSJyOEKkvHaTL9wZXhjc_urfzm3ZDMTg
 // ============================================================
 
 /**
@@ -410,6 +410,80 @@ function findHeaderColumn(headers, targetPeriod) {
 }
 
 // ============================================================
+// STRUKTUR SPREADSHEET & EKSTRAKSI DATA IURAN FLEKSIBEL
+// ============================================================
+
+/**
+ * Mengambil sheet iuran: mendukung nama 'RT10 : 2026', 'DB_Iuran', atau tab pertama
+ */
+function getSheetIuran(ss) {
+  return ss.getSheetByName('RT10 : 2026') || 
+         ss.getSheetByName('DB_Iuran') || 
+         ss.getSheetByName('2026') || 
+         ss.getSheets()[0];
+}
+
+/**
+ * Ekstraksi baris header dan baris warga secara toleran
+ * Mendukung format 1-baris header maupun 2-baris header (seperti sheet RT10 : 2026)
+ */
+function extractIuranStructure(data) {
+  if (!data || data.length === 0) return null;
+
+  var headerRowIdx = 0;
+
+  // Cek apakah baris 1 (index 1) adalah baris nama bulan (JAN, FEB, MAR, dst.)
+  if (data.length > 1) {
+    var row1Str = data[1].join(' ').toLowerCase();
+    if (row1Str.indexOf('jan') !== -1 || row1Str.indexOf('feb') !== -1 || row1Str.indexOf('mar') !== -1) {
+      headerRowIdx = 1;
+    }
+  }
+
+  // Gabungkan header dari baris 0 dan baris header bulan
+  var headers = [];
+  for (var c = 0; c < data[0].length; c++) {
+    var val1 = data[headerRowIdx] ? formatHeader(data[headerRowIdx][c]) : '';
+    var val0 = formatHeader(data[0][c]);
+    var finalHeader = val1 !== '' ? val1 : val0;
+    headers.push(finalHeader);
+  }
+
+  // Temukan baris awal data warga (melewati header dan baris kosong)
+  var startRow = headerRowIdx + 1;
+  while (startRow < data.length) {
+    var rBlok = (data[startRow][0] || '').toString().trim();
+    var rNama = (data[startRow][1] || '').toString().trim();
+    if (rBlok !== '' && rNama !== '') {
+      break;
+    }
+    startRow++;
+  }
+
+  // Kumpulkan baris-baris warga (abaikan baris kosong dan footer total)
+  var rows = [];
+  for (var r = startRow; r < data.length; r++) {
+    var blok = (data[r][0] || '').toString().trim();
+    var nama = (data[r][1] || '').toString().trim();
+    if (!blok || !nama || blok.toLowerCase().includes('total') || blok.startsWith('Rp')) {
+      continue;
+    }
+    rows.push({
+      rowIndex: r,
+      blok: blok,
+      nama: nama,
+      rowData: data[r]
+    });
+  }
+
+  return {
+    headers: headers,
+    rows: rows,
+    headerRowIdx: headerRowIdx
+  };
+}
+
+// ============================================================
 // IURAN DATA BULANAN (Mendukung Input Angka & Checkbox)
 // ============================================================
 function getIuranData(period) {
@@ -418,26 +492,25 @@ function getIuranData(period) {
   }
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName('DB_Iuran');
+  var sheet = getSheetIuran(ss);
   if (!sheet) {
-    return { success: false, message: 'Sheet DB_Iuran belum dibuat. Jalankan fungsi setupSheets() terlebih dahulu.' };
+    return { success: false, message: 'Sheet iuran tidak ditemukan.' };
   }
 
   var data = sheet.getDataRange().getValues();
-  if (data.length === 0) {
-    return { success: false, message: 'Sheet DB_Iuran kosong.' };
+  var parsedStruct = extractIuranStructure(data);
+  if (!parsedStruct) {
+    return { success: false, message: 'Sheet iuran kosong atau format tidak sesuai.' };
   }
 
-  var headers = data[0];
-  var allHeadersFormatted = headers.map(function(h) { return formatHeader(h); });
-
+  var headers = parsedStruct.headers;
   var colIndex = findHeaderColumn(headers, period);
 
   if (colIndex === -1) {
     return {
       success: false,
       message: 'Periode tidak ditemukan: ' + period,
-      availableHeaders: allHeadersFormatted
+      availableHeaders: headers
     };
   }
 
@@ -445,18 +518,19 @@ function getIuranData(period) {
   var lunasCount = 0;
   var sumNominal = 0;
 
-  for (var i = 1; i < data.length; i++) {
-    if (data[i][0] === '' || data[i][0] === null) continue;
+  for (var i = 0; i < parsedStruct.rows.length; i++) {
+    var item = parsedStruct.rows[i];
+    var cellVal = item.rowData[colIndex];
+    var parsed = parseDuesValue(cellVal);
 
-    var parsed = parseDuesValue(data[i][colIndex]);
     if (parsed.status) {
       lunasCount++;
       sumNominal += parsed.nominal;
     }
 
     result.push({
-      noBlok: data[i][0].toString(),
-      namaWarga: (data[i][1] || '').toString(),
+      noBlok: item.blok,
+      namaWarga: item.nama,
       status: parsed.status,
       nominal: parsed.nominal
     });
@@ -468,13 +542,13 @@ function getIuranData(period) {
   return {
     success: true,
     period: period,
-    matchedHeader: formatHeader(headers[colIndex]),
+    matchedHeader: headers[colIndex],
     totalRumah: totalRumah,
     totalLunas: lunasCount,
     totalNominal: sumNominal,
     persenLunas: persenLunas,
     data: result,
-    availableHeaders: allHeadersFormatted
+    availableHeaders: headers
   };
 }
 
@@ -483,32 +557,53 @@ function getIuranData(period) {
 // ============================================================
 function getIuran2026Data() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName('DB_Iuran');
+  var sheet = getSheetIuran(ss);
   if (!sheet) {
-    return { success: false, message: 'Sheet DB_Iuran belum dibuat.' };
+    return { success: false, message: 'Sheet iuran tidak ditemukan.' };
   }
 
   var data = sheet.getDataRange().getValues();
-  if (data.length === 0) {
-    return { success: false, message: 'Sheet DB_Iuran kosong.' };
+  var parsedStruct = extractIuranStructure(data);
+  if (!parsedStruct) {
+    return { success: false, message: 'Sheet iuran kosong.' };
   }
 
-  var headers = data[0];
-  var allHeadersFormatted = headers.map(function(h) { return formatHeader(h); });
-
+  var headers = parsedStruct.headers;
   var cols2026 = [];
+
+  // Cari kolom-kolom bulan (JAN s/d DES)
   for (var c = 0; c < headers.length; c++) {
-    var hFormatted = formatHeader(headers[c]);
+    var hFormatted = headers[c];
     var normH = normalizeStr(hFormatted);
-    if (normH.indexOf('2026') !== -1) {
-      cols2026.push({ colIndex: c, header: hFormatted, norm: normH });
+    // Jika kolom memuat nama bulan atau 2026
+    if (
+      normH.indexOf('jan') !== -1 || normH.indexOf('feb') !== -1 ||
+      normH.indexOf('mar') !== -1 || normH.indexOf('apr') !== -1 ||
+      normH.indexOf('mei') !== -1 || normH.indexOf('jun') !== -1 ||
+      normH.indexOf('jul') !== -1 || normH.indexOf('agu') !== -1 ||
+      normH.indexOf('sep') !== -1 || normH.indexOf('okt') !== -1 ||
+      normH.indexOf('nov') !== -1 || normH.indexOf('des') !== -1 ||
+      normH.indexOf('2026') !== -1
+    ) {
+      if (normH.indexOf('total') === -1 && normH.indexOf('iuran2026') === -1) {
+        cols2026.push({ colIndex: c, header: hFormatted, norm: normH });
+      }
     }
   }
 
-  // Jika tidak ada kolom yang secara spesifik mengandung '2026', fallback ke 12 kolom terakhir atau semua kolom periode
+  // Jika tidak terdeteksi nama bulan, ambil kolom di antara Nama dan Total
   if (cols2026.length === 0) {
-    for (var c2 = 2; c2 < headers.length; c2++) {
-      cols2026.push({ colIndex: c2, header: formatHeader(headers[c2]), norm: normalizeStr(formatHeader(headers[c2])) });
+    for (var c2 = 2; c2 < Math.min(headers.length, 14); c2++) {
+      cols2026.push({ colIndex: c2, header: headers[c2], norm: normalizeStr(headers[c2]) });
+    }
+  }
+
+  // Cek apakah ada kolom TOTAL tahunan
+  var totalColIdx = -1;
+  for (var ct = 0; ct < headers.length; ct++) {
+    if (normalizeStr(headers[ct]) === 'total') {
+      totalColIdx = ct;
+      break;
     }
   }
 
@@ -516,11 +611,11 @@ function getIuran2026Data() {
   var totalNominal2026 = 0;
   var totalLunasCount = 0;
 
-  for (var i = 1; i < data.length; i++) {
-    if (data[i][0] === '' || data[i][0] === null) continue;
+  for (var i = 0; i < parsedStruct.rows.length; i++) {
+    var rItem = parsedStruct.rows[i];
+    var noBlok = rItem.blok;
+    var namaWarga = rItem.nama;
 
-    var noBlok = data[i][0].toString();
-    var namaWarga = (data[i][1] || '').toString();
     var houseNominal = 0;
     var houseBulanLunas = 0;
     var monthlyStatus = {};
@@ -528,7 +623,7 @@ function getIuran2026Data() {
     for (var k = 0; k < cols2026.length; k++) {
       var colIdx = cols2026[k].colIndex;
       var hName = cols2026[k].header;
-      var cellVal = data[i][colIdx];
+      var cellVal = rItem.rowData[colIdx];
       var parsed = parseDuesValue(cellVal);
 
       if (parsed.status) {
@@ -538,7 +633,15 @@ function getIuran2026Data() {
       monthlyStatus[hName] = parsed;
     }
 
-    if (houseBulanLunas > 0) {
+    // Jika kolom TOTAL tersedia di spreadsheet, utamakan nilai total dari sheet
+    if (totalColIdx !== -1) {
+      var parsedTotal = parseDuesValue(rItem.rowData[totalColIdx]);
+      if (parsedTotal.nominal > 0) {
+        houseNominal = parsedTotal.nominal;
+      }
+    }
+
+    if (houseBulanLunas > 0 || houseNominal > 0) {
       totalLunasCount++;
     }
     totalNominal2026 += houseNominal;
@@ -546,7 +649,7 @@ function getIuran2026Data() {
     result.push({
       noBlok: noBlok,
       namaWarga: namaWarga,
-      status: houseBulanLunas > 0,
+      status: (houseBulanLunas > 0 || houseNominal > 0),
       totalNominal: houseNominal,
       bulanLunasCount: houseBulanLunas,
       totalBulan: cols2026.length,
@@ -566,7 +669,7 @@ function getIuran2026Data() {
     totalNominalTerkumpul: totalNominal2026,
     persenKepatuhan: persenKepatuhan,
     data: result,
-    availableHeaders: allHeadersFormatted
+    availableHeaders: headers
   };
 }
 

@@ -19,9 +19,17 @@ export default function KeuanganDashboard() {
   const periodToQuery = useMemo(() => {
     switch (selectedPeriod) {
       case 'November 2026': return { month: 'Nov', iuranPeriod: 'Nov 2026' };
+      case 'Desember 2026': return { month: 'Des', iuranPeriod: 'Des 2026' };
       case 'Oktober 2026': return { month: 'Okt', iuranPeriod: 'Okt 2026' };
       case 'September 2026': return { month: 'Sep', iuranPeriod: 'Sep 2026' };
       case 'Agustus 2026': return { month: 'Agu', iuranPeriod: 'Agu 2026' };
+      case 'Juli 2026': return { month: 'Jul', iuranPeriod: 'Jul 2026' };
+      case 'Juni 2026': return { month: 'Jun', iuranPeriod: 'Jun 2026' };
+      case 'Mei 2026': return { month: 'Mei', iuranPeriod: 'Mei 2026' };
+      case 'April 2026': return { month: 'Apr', iuranPeriod: 'Apr 2026' };
+      case 'Maret 2026': return { month: 'Mar', iuranPeriod: 'Mar 2026' };
+      case 'Februari 2026': return { month: 'Feb', iuranPeriod: 'Feb 2026' };
+      case 'Januari 2026': return { month: 'Jan', iuranPeriod: 'Jan 2026' };
       case 'Semua Periode 2026': return { month: 'all', iuranPeriod: '2026' };
       default: return { month: 'Nov', iuranPeriod: 'Nov 2026' };
     }
@@ -183,9 +191,17 @@ export default function KeuanganDashboard() {
               className="bg-white border border-zinc-200/90 text-zinc-800 text-xs sm:text-sm font-medium rounded-lg px-3.5 py-2 pr-8 shadow-xs focus:outline-none focus:ring-2 focus:ring-zinc-900/10 cursor-pointer appearance-none"
             >
               <option value="November 2026">November 2026</option>
+              <option value="Desember 2026">Desember 2026</option>
               <option value="Oktober 2026">Oktober 2026</option>
               <option value="September 2026">September 2026</option>
               <option value="Agustus 2026">Agustus 2026</option>
+              <option value="Juli 2026">Juli 2026</option>
+              <option value="Juni 2026">Juni 2026</option>
+              <option value="Mei 2026">Mei 2026</option>
+              <option value="April 2026">April 2026</option>
+              <option value="Maret 2026">Maret 2026</option>
+              <option value="Februari 2026">Februari 2026</option>
+              <option value="Januari 2026">Januari 2026</option>
               <option value="Semua Periode 2026">Semua Periode 2026</option>
             </select>
             <svg
