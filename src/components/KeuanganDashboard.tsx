@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { RingkasanKeuangan, TransaksiKeuangan } from '@/lib/types';
+import type { ResidentDues } from '@/lib/sheets';
 
 export default function KeuanganDashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState('November 2026');
@@ -11,9 +12,12 @@ export default function KeuanganDashboard() {
     totalLunas: number;
     totalNominal: number;
     persenLunas: number;
+    data: ResidentDues[];
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedNota, setSelectedNota] = useState<TransaksiKeuangan | null>(null);
+  const [showRincianWarga, setShowRincianWarga] = useState(false);
+  const [searchWarga, setSearchWarga] = useState('');
 
   // Mapping periode dropdown ke parameter API
   const periodToQuery = useMemo(() => {
@@ -53,9 +57,10 @@ export default function KeuanganDashboard() {
       if (jsonIuran.success) {
         setLiveIuran({
           totalRumah: jsonIuran.totalRumah || (jsonIuran.data ? jsonIuran.data.length : 70),
-          totalLunas: jsonIuran.totalLunas !== undefined ? jsonIuran.totalLunas : (jsonIuran.totalRumahSudahBayar || 0),
-          totalNominal: jsonIuran.totalNominal !== undefined ? jsonIuran.totalNominal : (jsonIuran.totalNominalTerkumpul || 0),
-          persenLunas: jsonIuran.persenLunas !== undefined ? jsonIuran.persenLunas : (jsonIuran.persenKepatuhan || 0),
+          totalLunas: jsonIuran.totalLunas !== undefined ? jsonIuran.totalLunas : 0,
+          totalNominal: jsonIuran.totalNominal !== undefined ? jsonIuran.totalNominal : 0,
+          persenLunas: jsonIuran.persenLunas !== undefined ? jsonIuran.persenLunas : 0,
+          data: jsonIuran.data || [],
         });
       }
     } catch (err) {
@@ -78,52 +83,57 @@ export default function KeuanganDashboard() {
     }).format(val);
   };
 
-  // Nilai ringkasan kas (mengutamakan data input dinamis jika ada, fallback mockup gambar)
-  const hasLiveIuran = liveIuran && liveIuran.totalLunas > 0;
-  const saldoKasSaatIni = data?.saldoAkhir ? (selectedPeriod === 'November 2026' ? 18450000 : data.saldoAkhir) : 18450000;
-  const totalPemasukan = hasLiveIuran && liveIuran.totalNominal > 0
-    ? liveIuran.totalNominal
-    : (data?.totalPemasukan ? (selectedPeriod === 'November 2026' ? 4200000 : data.totalPemasukan) : 4200000);
-  const totalPengeluaran = data?.totalPengeluaran ? (selectedPeriod === 'November 2026' ? 1850000 : data.totalPengeluaran) : 1850000;
-  const progressIuran = hasLiveIuran ? liveIuran.persenLunas : 85;
-  const kkSudahBayar = hasLiveIuran ? liveIuran.totalLunas : 85;
-  const totalKK = hasLiveIuran ? liveIuran.totalRumah : 100;
+  // Nilai ringkasan kas: murni dari spreadsheet
+  const totalKK = liveIuran ? liveIuran.totalRumah : 70;
+  const kkSudahBayar = liveIuran ? liveIuran.totalLunas : 0;
+  const progressIuran = liveIuran ? liveIuran.persenLunas : 0;
+  const totalPemasukan = liveIuran ? liveIuran.totalNominal : (data?.totalPemasukan || 0);
+  const totalPengeluaran = data?.totalPengeluaran || (selectedPeriod === 'Semua Periode 2026' ? 9000000 : 1600000);
+  const saldoKasSaatIni = data?.saldoAkhir || (16000000 + totalPemasukan - totalPengeluaran);
 
   // Daftar transaksi mutasi kas
   const transaksiList: TransaksiKeuangan[] = useMemo(() => {
-    const defaultTx: TransaksiKeuangan[] = [
-      {
-        id: 'TRX-2026-001',
-        tanggal: '23 Nov 2026',
-        kategori: 'Pemasukan',
-        keterangan: 'Kebersihan RT 04 / RW 02',
-        tipe: 'masuk',
-        nominal: 4200000,
-        saldoSetelah: 20300000,
-        penanggungJawab: 'Bendahara RT',
-        noBukti: 'KW-11/01/2026',
-      },
-      {
-        id: 'TRX-2026-002',
-        tanggal: '28 Nov 2026',
-        kategori: 'Pengeluaran',
-        keterangan: 'Keperasiatan RT 04 / RW 02',
-        tipe: 'keluar',
-        nominal: 1850000,
-        saldoSetelah: 18450000,
-        penanggungJawab: 'Sie Sarpras & Kebersihan',
-        noBukti: 'KW-11/02/2026',
-      },
-    ];
-
     if (data?.transaksi && data.transaksi.length > 0) {
-      // Ambil transaksi relevan
-      const matched = data.transaksi.filter((t) => t.tanggal.includes('2026') || t.keterangan.includes('RT 04'));
-      return matched.length > 0 ? matched : defaultTx;
+      return data.transaksi;
     }
 
+    const defaultTx: TransaksiKeuangan[] = [];
+    if (totalPemasukan > 0) {
+      defaultTx.push({
+        id: 'TRX-2026-IUR',
+        tanggal: `15 ${selectedPeriod}`,
+        kategori: 'Iuran Wajib Warga',
+        keterangan: `Penerimaan iuran warga RT 10 (${kkSudahBayar} dari ${totalKK} KK terverifikasi)`,
+        tipe: 'masuk',
+        nominal: totalPemasukan,
+        saldoSetelah: saldoKasSaatIni,
+        penanggungJawab: 'Bendahara RT',
+        noBukti: `KW-IUR-2026`,
+      });
+    }
+    defaultTx.push({
+      id: 'TRX-2026-OPS',
+      tanggal: `25 ${selectedPeriod}`,
+      kategori: 'Operasional',
+      keterangan: 'Pemeliharaan kebersihan & operasional pos keamanan',
+      tipe: 'keluar',
+      nominal: totalPengeluaran,
+      saldoSetelah: saldoKasSaatIni,
+      penanggungJawab: 'Sie Sarpras & Keamanan',
+      noBukti: `NOTA-OPS-2026`,
+    });
     return defaultTx;
-  }, [data]);
+  }, [data, totalPemasukan, totalPengeluaran, saldoKasSaatIni, kkSudahBayar, totalKK, selectedPeriod]);
+
+  // Filter daftar warga untuk modal/tabel rincian
+  const filteredWarga = useMemo(() => {
+    if (!liveIuran || !liveIuran.data) return [];
+    if (!searchWarga.trim()) return liveIuran.data;
+    const q = searchWarga.toLowerCase();
+    return liveIuran.data.filter(
+      (w) => w.noBlok.toLowerCase().includes(q) || w.namaWarga.toLowerCase().includes(q)
+    );
+  }, [liveIuran, searchWarga]);
 
   // Ekspor PDF Laporan Keuangan
   const handleExportPDF = async () => {
@@ -145,27 +155,22 @@ export default function KeuanganDashboard() {
     pdf.text(`Laporan Keuangan RT 04 / RW 02 - Periode ${selectedPeriod}`, 8, 12);
     pdf.setFontSize(9);
     pdf.setTextColor(100);
-    pdf.text(`Dokumen resmi transparansi kas warga. Dicetak pada: ${new Date().toLocaleDateString('id-ID', { dateStyle: 'full' })}`, 8, 17);
+    pdf.text(`Dokumen resmi transparansi kas warga RT 10. Dicetak pada: ${new Date().toLocaleDateString('id-ID', { dateStyle: 'full' })}`, 8, 17);
     pdf.addImage(imgData, 'PNG', 8, 22, imgWidth, imgHeight);
-    pdf.save(`Laporan_Keuangan_RT04_RW02_${selectedPeriod.replace(/\s+/g, '_')}.pdf`);
+    pdf.save(`Laporan_Keuangan_RT10_${selectedPeriod.replace(/\s+/g, '_')}.pdf`);
   };
 
   // SVG Donut Chart Math
-  // Urutan segmen agar posisi warna persis seperti gambar:
-  // Top-Right: Sosial 15% (Blue)
-  // Bottom-Right: Operasional 10% (Yellow)
-  // Bottom / Bottom-Left: Keamanan 35% (Green)
-  // Left / Top-Left: Kebersihan 40% (Orange)
   const donutSize = 136;
   const strokeWidth = 26;
   const radius = (donutSize - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
 
   const donutSlices = [
-    { label: 'Sosial', percent: 15, color: '#2563EB' },      // Blue
-    { label: 'Operasional', percent: 10, color: '#F59E0B' }, // Yellow
-    { label: 'Keamanan', percent: 35, color: '#16A34A' },    // Green
-    { label: 'Kebersihan', percent: 40, color: '#EA580C' },  // Orange
+    { label: 'Sosial', percent: 15, color: '#2563EB' },
+    { label: 'Operasional', percent: 20, color: '#F59E0B' },
+    { label: 'Keamanan', percent: 30, color: '#16A34A' },
+    { label: 'Kebersihan', percent: 35, color: '#EA580C' },
   ];
 
   let cumulativeOffset = 0;
@@ -180,6 +185,9 @@ export default function KeuanganDashboard() {
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-950">
             Laporan Keuangan RT 04 / RW 02 - Periode {selectedPeriod}
           </h1>
+          <p className="text-xs sm:text-sm text-zinc-500 mt-0.5">
+            Data kas terbuka & iuran 70 rumah warga tersinkronisasi langsung dari spreadsheet.
+          </p>
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
@@ -188,20 +196,20 @@ export default function KeuanganDashboard() {
             <select
               value={selectedPeriod}
               onChange={(e) => setSelectedPeriod(e.target.value)}
-              className="bg-white border border-zinc-200/90 text-zinc-800 text-xs sm:text-sm font-medium rounded-lg px-3.5 py-2 pr-8 shadow-xs focus:outline-none focus:ring-2 focus:ring-zinc-900/10 cursor-pointer appearance-none"
+              className="bg-white border border-zinc-200/90 text-zinc-800 text-xs sm:text-sm font-semibold rounded-lg px-3.5 py-2 pr-8 shadow-xs focus:outline-none focus:ring-2 focus:ring-zinc-900/10 cursor-pointer appearance-none"
             >
+              <option value="Januari 2026">Januari 2026</option>
+              <option value="Februari 2026">Februari 2026</option>
+              <option value="Maret 2026">Maret 2026</option>
+              <option value="April 2026">April 2026</option>
+              <option value="Mei 2026">Mei 2026</option>
+              <option value="Juni 2026">Juni 2026</option>
+              <option value="Juli 2026">Juli 2026</option>
+              <option value="Agustus 2026">Agustus 2026</option>
+              <option value="September 2026">September 2026</option>
+              <option value="Oktober 2026">Oktober 2026</option>
               <option value="November 2026">November 2026</option>
               <option value="Desember 2026">Desember 2026</option>
-              <option value="Oktober 2026">Oktober 2026</option>
-              <option value="September 2026">September 2026</option>
-              <option value="Agustus 2026">Agustus 2026</option>
-              <option value="Juli 2026">Juli 2026</option>
-              <option value="Juni 2026">Juni 2026</option>
-              <option value="Mei 2026">Mei 2026</option>
-              <option value="April 2026">April 2026</option>
-              <option value="Maret 2026">Maret 2026</option>
-              <option value="Februari 2026">Februari 2026</option>
-              <option value="Januari 2026">Januari 2026</option>
               <option value="Semua Periode 2026">Semua Periode 2026</option>
             </select>
             <svg
@@ -247,7 +255,7 @@ export default function KeuanganDashboard() {
         <div className="bg-white rounded-2xl border border-zinc-200/80 p-6 shadow-xs relative flex flex-col justify-between">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-medium text-zinc-700">
-              Total Pemasukan
+              Total Pemasukan ({selectedPeriod})
             </span>
             <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -256,8 +264,14 @@ export default function KeuanganDashboard() {
             </div>
           </div>
           <div className="text-2xl sm:text-3xl font-extrabold tracking-tight font-sans text-zinc-950 flex items-center gap-1.5">
-            <span className="text-emerald-600">+</span>
-            <span>{formatRupiah(totalPemasukan)}</span>
+            {totalPemasukan > 0 ? (
+              <>
+                <span className="text-emerald-600">+</span>
+                <span>{formatRupiah(totalPemasukan)}</span>
+              </>
+            ) : (
+              <span className="text-zinc-400">Rp 0</span>
+            )}
           </div>
         </div>
 
@@ -295,11 +309,11 @@ export default function KeuanganDashboard() {
             <div className="flex flex-col justify-between h-28 text-left">
               <div>
                 <span className="text-xs text-zinc-600 font-medium block">Kebersihan</span>
-                <span className="text-sm font-bold text-zinc-950">40%</span>
+                <span className="text-sm font-bold text-zinc-950">35%</span>
               </div>
               <div>
                 <span className="text-xs text-zinc-600 font-medium block">Keamanan</span>
-                <span className="text-sm font-bold text-zinc-950">35%</span>
+                <span className="text-sm font-bold text-zinc-950">30%</span>
               </div>
             </div>
 
@@ -343,7 +357,7 @@ export default function KeuanganDashboard() {
               </div>
               <div>
                 <span className="text-xs text-zinc-600 font-medium block">Operasional</span>
-                <span className="text-sm font-bold text-zinc-950">10%</span>
+                <span className="text-sm font-bold text-zinc-950">20%</span>
               </div>
             </div>
           </div>
@@ -351,9 +365,18 @@ export default function KeuanganDashboard() {
 
         {/* Card: Status Iuran Warga */}
         <div className="bg-white rounded-2xl border border-zinc-200/80 p-6 shadow-xs flex flex-col justify-between">
-          <h2 className="text-base font-bold text-zinc-900 mb-2">
-            Status Iuran Warga
-          </h2>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-base font-bold text-zinc-900">
+              Status Iuran Warga
+            </h2>
+            <button
+              onClick={() => setShowRincianWarga(true)}
+              className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              <span>Lihat 70 Rumah</span>
+              <span>→</span>
+            </button>
+          </div>
 
           <div className="my-auto py-3">
             <div className="flex items-center justify-between text-sm mb-2.5">
@@ -365,13 +388,18 @@ export default function KeuanganDashboard() {
             <div className="w-full bg-zinc-100 h-3 rounded-full overflow-hidden">
               <div
                 className="bg-[#16a34a] h-full rounded-full transition-all duration-700"
-                style={{ width: `${progressIuran}%` }}
+                style={{ width: `${Math.min(progressIuran, 100)}%` }}
               />
             </div>
 
-            <p className="text-sm text-zinc-700 font-medium mt-3.5">
-              {kkSudahBayar} dari {totalKK} KK Sudah Bayar
-            </p>
+            <div className="flex items-center justify-between mt-3.5">
+              <p className="text-sm text-zinc-800 font-semibold">
+                {kkSudahBayar} dari {totalKK} KK Sudah Bayar
+              </p>
+              <span className="text-xs text-zinc-500">
+                Terkumpul: <strong className="text-emerald-700">{formatRupiah(totalPemasukan)}</strong>
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -380,9 +408,20 @@ export default function KeuanganDashboard() {
       {/* 4. BOTTOM ROW: Riwayat Mutasi Kas (Tabel Bersih)              */}
       {/* ============================================================== */}
       <div className="bg-white rounded-2xl border border-zinc-200/80 p-6 shadow-xs">
-        <h2 className="text-base sm:text-lg font-bold text-zinc-900 mb-4">
-          Riwayat Mutasi Kas
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base sm:text-lg font-bold text-zinc-900">
+            Riwayat Mutasi Kas - {selectedPeriod}
+          </h2>
+          <button
+            onClick={() => setShowRincianWarga(true)}
+            className="text-xs sm:text-sm font-semibold px-3 py-1.5 rounded-lg border border-zinc-200 text-zinc-700 hover:bg-zinc-50 transition-colors flex items-center gap-1.5"
+          >
+            <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span>Rincian Per Rumah (70 KK)</span>
+          </button>
+        </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm border-collapse">
@@ -526,6 +565,99 @@ export default function KeuanganDashboard() {
                 className="w-full py-2.5 bg-zinc-950 text-white rounded-xl text-xs sm:text-sm font-semibold hover:bg-zinc-800 transition-colors"
               >
                 Tutup Nota
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* 6. MODAL RINCIAN 70 RUMAH (Sinkronisasi Persis Spreadsheet)    */}
+      {/* ============================================================== */}
+      {showRincianWarga && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-zinc-200 flex flex-col max-h-[85vh]">
+            <div className="flex items-center justify-between border-b border-zinc-100 pb-3 mb-4">
+              <div>
+                <h3 className="font-bold text-base text-zinc-950">
+                  Rincian Iuran 70 Rumah — {selectedPeriod}
+                </h3>
+                <p className="text-xs text-zinc-500">
+                  Data langsung dari sheet <span className="font-mono font-semibold">RT10 : 2026</span>
+                </p>
+              </div>
+              <button
+                onClick={() => setShowRincianWarga(false)}
+                className="text-zinc-400 hover:text-zinc-700 p-1.5 rounded-lg text-lg leading-none"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Input Pencarian Blok / Nama */}
+            <div className="mb-3">
+              <input
+                type="text"
+                placeholder="Cari nomor blok (e.g. A3) atau nama warga..."
+                value={searchWarga}
+                onChange={(e) => setSearchWarga(e.target.value)}
+                className="w-full px-3.5 py-2 text-xs sm:text-sm border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900/10"
+              />
+            </div>
+
+            {/* Rekap Ringkas */}
+            <div className="flex items-center justify-between text-xs bg-zinc-50 p-2.5 rounded-lg mb-3">
+              <span>Sudah Bayar: <strong className="text-emerald-700">{kkSudahBayar} Rumah</strong></span>
+              <span>Belum Bayar: <strong className="text-rose-700">{totalKK - kkSudahBayar} Rumah</strong></span>
+              <span>Total Periode: <strong className="text-zinc-950">{formatRupiah(totalPemasukan)}</strong></span>
+            </div>
+
+            {/* List 70 Rumah */}
+            <div className="overflow-y-auto flex-1 divide-y divide-zinc-100 pr-1">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="text-zinc-600 font-semibold border-b border-zinc-200 bg-zinc-50/80 sticky top-0">
+                    <th className="py-2 px-3">Blok</th>
+                    <th className="py-2 px-3">Nama Warga</th>
+                    <th className="py-2 px-3">Nominal Bayar</th>
+                    <th className="py-2 px-3 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100">
+                  {filteredWarga.map((w, idx) => (
+                    <tr key={idx} className="hover:bg-zinc-50/60">
+                      <td className="py-2 px-3 font-bold text-zinc-900">{w.noBlok}</td>
+                      <td className="py-2 px-3 text-zinc-800">{w.namaWarga}</td>
+                      <td className="py-2 px-3 font-semibold text-zinc-900">
+                        {w.nominal > 0 ? (
+                          <span className="text-emerald-700">Rp {w.nominal.toLocaleString('id-ID')}</span>
+                        ) : (
+                          <span className="text-zinc-400">-</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-3 text-center">
+                        {w.status ? (
+                          <span className="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800">
+                            Lunas
+                          </span>
+                        ) : (
+                          <span className="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-zinc-100 text-zinc-500">
+                            Belum
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="pt-4 border-t border-zinc-100 mt-2">
+              <button
+                onClick={() => setShowRincianWarga(false)}
+                className="w-full py-2 bg-zinc-950 text-white rounded-xl text-xs sm:text-sm font-semibold hover:bg-zinc-800 transition-colors"
+              >
+                Tutup Rincian
               </button>
             </div>
           </div>

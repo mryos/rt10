@@ -17,6 +17,7 @@ export interface MonthIuranSummary {
 export const SPREADSHEET_ID = '1PYmo1HrgNpETSJyOEKkvHaTL9wZXhjc_urfzm3ZDMTg';
 export const SPREADSHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=0`;
 
+// Pemetaan kolom bulan di spreadsheet (Row 2: JAN di col 2 ... DES di col 13, TOTAL di col 14)
 const MONTH_COL_MAP: { [key: string]: number } = {
   jan: 2,
   januari: 2,
@@ -84,10 +85,11 @@ function parseNominal(str: string): number {
 
 /**
  * Mengambil data iuran langsung dari Google Spreadsheet live (format CSV publik)
+ * Real-time, tanpa cache kadaluarsa (cache: no-store)
  */
 export async function fetchLiveSpreadsheetIuran(periodQuery: string): Promise<MonthIuranSummary> {
   const res = await fetch(SPREADSHEET_CSV_URL, {
-    next: { revalidate: 30 },
+    cache: 'no-store',
     redirect: 'follow',
   });
 
@@ -98,20 +100,20 @@ export async function fetchLiveSpreadsheetIuran(periodQuery: string): Promise<Mo
   const text = await res.text();
   const rawLines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
 
-  // Ambil baris warga (baris index 3 s/d 72)
+  // Ambil baris warga (baris index 3 s/d 72, total 70 rumah dari Blok A1 s/d G9)
   const residentRows: string[][] = [];
   for (let i = 3; i < rawLines.length; i++) {
     const cols = parseCsvRow(rawLines[i]);
     const blok = cols[0];
     const nama = cols[1];
-    // Abaikan baris total footer atau baris kosong
+    // Lewati jika baris kosong atau baris total rekap footer
     if (!blok || !nama || blok.toLowerCase().includes('total') || blok.startsWith('Rp')) {
       continue;
     }
     residentRows.push(cols);
   }
 
-  const queryNorm = periodQuery.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const queryNorm = (periodQuery || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   const isAll2026 =
     queryNorm === 'all' ||
     queryNorm === '2026' ||

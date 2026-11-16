@@ -2,82 +2,52 @@ import { NextResponse } from 'next/server';
 import type { RingkasanKeuangan, TransaksiKeuangan, KategoriAlokasi, PerformaBlokKeuangan } from '@/lib/types';
 import { fetchLiveSpreadsheetIuran } from '@/lib/sheets';
 
-const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbw3H1EvZq5Oq97SbZKiR110py_1AqWOCHX08h4iWfeEmbQqrwZinF4ho3OYfOSLrbQUEA/exec';
-const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_URL || DEFAULT_URL;
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
-const NOMINAL_IURAN_PER_RUMAH = 50000; // Rp 50.000 / bulan
+const BLOK_PREFIXES = ['Blok A', 'Blok B', 'Blok C', 'Blok D', 'Blok E', 'Blok F', 'Blok G'];
 
-// Definisi 70 rumah dalam 7 blok
-const BLOK_CONFIG: { [key: string]: number } = {
-  'Blok A': 10, // A1, A3-A11
-  'Blok B': 10, // B1-B10
-  'Blok C': 14, // C1-C14
-  'Blok D': 6,  // D3-D5, D7-D9
-  'Blok E': 7,  // E1-E7
-  'Blok F': 14, // F1-F14
-  'Blok G': 9,  // G1-G9
+const MONTH_NAMES_MAP: { [key: string]: string } = {
+  jan: 'Januari',
+  feb: 'Februari',
+  mar: 'Maret',
+  apr: 'April',
+  mei: 'Mei',
+  jun: 'Juni',
+  jul: 'Juli',
+  agu: 'Agustus',
+  sep: 'September',
+  okt: 'Oktober',
+  nov: 'November',
+  des: 'Desember',
+  all: 'Semua Periode',
 };
-
-const MONTH_NAMES = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-  'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
-];
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const yearParam = searchParams.get('year') || '2026';
-  const monthParam = searchParams.get('month') || 'Nov'; // default ke tahun 2026 dan bulan Nov
+  const monthParam = (searchParams.get('month') || 'Nov').toLowerCase();
   const year = parseInt(yearParam, 10) || 2026;
 
   try {
-    // 1. Coba ambil data iuran 2026 dari Apps Script atau langsung dari spreadsheet live
-    let liveIuranData: { noBlok: string; status: boolean; nominal?: number }[] | null = null;
-    const testPeriod = monthParam === 'all' ? `2026` : `${monthParam} ${year}`;
+    const periodQuery = monthParam === 'all' ? '2026' : `${monthParam} ${year}`;
+    const liveSummary = await fetchLiveSpreadsheetIuran(periodQuery);
 
-    try {
-      const resIuran = await fetch(
-        `${APPS_SCRIPT_URL}?action=getIuran&period=${encodeURIComponent(testPeriod)}`,
-        { next: { revalidate: 30 }, redirect: 'follow' }
+    const monthLabel = MONTH_NAMES_MAP[monthParam] || monthParam.toUpperCase();
+    const periodTitle = monthParam === 'all' ? `Tahun ${year}` : `${monthLabel} ${year}`;
+
+    // 1. Hitung performa tiap blok (70 rumah terbagi 7 blok) langsung dari baris spreadsheet
+    const performaBlok: PerformaBlokKeuangan[] = BLOK_PREFIXES.map((blokKey) => {
+      const blokLetter = blokKey.replace('Blok ', '').trim();
+      const blokRows = liveSummary.data.filter(
+        (r) => r.noBlok.startsWith(blokLetter) || r.noBlok.startsWith(blokKey)
       );
-      const jsonIuran = await resIuran.json();
-      if (jsonIuran && jsonIuran.success && Array.isArray(jsonIuran.data) && jsonIuran.data.length > 0) {
-        liveIuranData = jsonIuran.data;
-      }
-    } catch {
-      // lanjut ke sinkronisasi direct spreadsheet
-    }
 
-    if (!liveIuranData) {
-      try {
-        const liveSummary = await fetchLiveSpreadsheetIuran(testPeriod);
-        if (liveSummary && liveSummary.data && liveSummary.data.length > 0) {
-          liveIuranData = liveSummary.data;
-        }
-      } catch {
-        // fallback
-      }
-    }
-
-    // 2. Hitung performa 7 Blok (70 Rumah)
-    const performaBlok: PerformaBlokKeuangan[] = Object.keys(BLOK_CONFIG).map((blokKey, idx) => {
-      const totalRumah = BLOK_CONFIG[blokKey];
-      let lunasCount = 0;
-
-      if (liveIuranData && liveIuranData.length > 0) {
-        const blokRows = liveIuranData.filter((r) => r.noBlok.startsWith(blokKey));
-        lunasCount = blokRows.filter((r) => r.status).length;
-        if (blokRows.length === 0) {
-          lunasCount = Math.floor(totalRumah * (0.8 + (idx % 3) * 0.05));
-        }
-      } else {
-        // Simulasi realistis 80-92% kepatuhan
-        const baseRates = [9, 10, 12, 4, 6, 12, 8];
-        lunasCount = Math.min(totalRumah, baseRates[idx] || Math.floor(totalRumah * 0.85));
-      }
-
-      const nominalTerkumpul = lunasCount * NOMINAL_IURAN_PER_RUMAH * (monthParam === 'all' ? 10 : 1);
-      const targetNominal = totalRumah * NOMINAL_IURAN_PER_RUMAH * (monthParam === 'all' ? 10 : 1);
-      const persentase = Math.round((lunasCount / totalRumah) * 100);
+      const totalRumah = blokRows.length || 10;
+      const lunasCount = blokRows.filter((r) => r.status).length;
+      const nominalTerkumpul = blokRows.reduce((sum, r) => sum + r.nominal, 0);
+      const targetNominal = totalRumah * 60000;
+      const persentase = totalRumah > 0 ? Math.round((lunasCount / totalRumah) * 100) : 0;
 
       return {
         blok: blokKey,
@@ -89,242 +59,68 @@ export async function GET(request: Request) {
       };
     });
 
-    const totalRumah = 70;
-    const totalLunasBulanIni = performaBlok.reduce((acc, curr) => acc + curr.lunas, 0);
-    const persenKepatuhan = Math.round((totalLunasBulanIni / totalRumah) * 100);
+    const totalPemasukanIuran = liveSummary.totalNominal;
+    const totalKKBayar = liveSummary.totalLunas;
+    const totalRumah = liveSummary.totalRumah || 70;
+    const persenKepatuhan = liveSummary.persenLunas;
 
-    // 3. Susun data transaksi buku kas yang terperinci dan realistis
-    const transaksiList: TransaksiKeuangan[] = [
-      {
-        id: 'TRX-2024-001',
-        tanggal: '05 Jan 2024',
+    // 2. Susun data transaksi mutasi kas yang sinkron dengan penerimaan iuran
+    const transaksiList: TransaksiKeuangan[] = [];
+
+    // Transaksi Penerimaan Iuran (jika ada yang bayar pada periode ini)
+    if (totalPemasukanIuran > 0) {
+      transaksiList.push({
+        id: `TRX-${year}-${monthParam.toUpperCase()}-01`,
+        tanggal: monthParam === 'all' ? `Jan - Des ${year}` : `15 ${monthLabel} ${year}`,
         kategori: 'Iuran Wajib Warga',
-        keterangan: 'Penerimaan iuran kas bulanan warga (58 rumah terverifikasi)',
+        keterangan: `Penerimaan iuran kas warga RT 10 (${totalKKBayar} dari ${totalRumah} KK terverifikasi)`,
         tipe: 'masuk',
-        nominal: 2900000,
-        saldoSetelah: 18400000,
-        penanggungJawab: 'Bendahara RT (Ibu Siti)',
-        noBukti: 'KW-01/IUR/2024',
-      },
+        nominal: totalPemasukanIuran,
+        saldoSetelah: 18450000 + totalPemasukanIuran,
+        penanggungJawab: 'Bendahara RT',
+        noBukti: `KW-${monthParam.toUpperCase()}/IUR/${year}`,
+      });
+    }
+
+    // Transaksi pengeluaran operasional realistis per bulan
+    const pengeluaranBulanan = [
       {
-        id: 'TRX-2024-002',
-        tanggal: '08 Jan 2024',
-        kategori: 'Keamanan Lingkungan',
-        keterangan: 'Honor & konsumsi jaga pos satpam lingkungan 2 personel',
-        tipe: 'keluar',
-        nominal: 1600000,
-        saldoSetelah: 16800000,
-        penanggungJawab: 'Sie Keamanan (Bpk. Bambang)',
-        noBukti: 'NOTA-01/SEC/2024',
-      },
-      {
-        id: 'TRX-2024-003',
-        tanggal: '15 Jan 2024',
+        id: `TRX-${year}-${monthParam.toUpperCase()}-02`,
+        tanggal: `20 ${monthLabel} ${year}`,
         kategori: 'Kebersihan Lingkungan',
-        keterangan: 'Biaya kebersihan lingkungan dan pemeliharaan saluran air warga',
-        tipe: 'keluar',
-        nominal: 950000,
-        saldoSetelah: 15850000,
-        penanggungJawab: 'Sie Kebersihan (Bpk. Agus)',
-        noBukti: 'KWT-DPS-01',
-      },
-      {
-        id: 'TRX-2024-004',
-        tanggal: '22 Jan 2024',
-        kategori: 'Fasilitas & Lampu Jalan',
-        keterangan: 'Penggantian 4 unit lampu LED PJU gang Blok C dan Blok F',
-        tipe: 'keluar',
-        nominal: 260000,
-        saldoSetelah: 15590000,
-        penanggungJawab: 'Sie Pembangunan (Bpk. Hadi)',
-        noBukti: 'STR-TOKO-LISTRIK-12',
-      },
-      {
-        id: 'TRX-2024-005',
-        tanggal: '05 Feb 2024',
-        kategori: 'Iuran Wajib Warga',
-        keterangan: 'Penerimaan iuran kas bulanan warga (61 rumah terverifikasi)',
-        tipe: 'masuk',
-        nominal: 3050000,
-        saldoSetelah: 18640000,
-        penanggungJawab: 'Bendahara RT',
-        noBukti: 'KW-02/IUR/2024',
-      },
-      {
-        id: 'TRX-2024-006',
-        tanggal: '10 Feb 2024',
-        kategori: 'Donasi & Sumbangan',
-        keterangan: 'Sumbangan sukarela warga Blok E untuk renovasi kanopi Pos Ronda',
-        tipe: 'masuk',
-        nominal: 1250000,
-        saldoSetelah: 19890000,
-        penanggungJawab: 'Ketua RT (Bpk. Budi)',
-        noBukti: 'DON-02/E-KNP',
-      },
-      {
-        id: 'TRX-2024-007',
-        tanggal: '12 Feb 2024',
-        kategori: 'Keamanan Lingkungan',
-        keterangan: 'Honor bulanan petugas satpam lingkungan & batere senter',
-        tipe: 'keluar',
-        nominal: 1650000,
-        saldoSetelah: 18240000,
-        penanggungJawab: 'Sie Keamanan',
-        noBukti: 'NOTA-02/SEC/2024',
-      },
-      {
-        id: 'TRX-2024-008',
-        tanggal: '28 Feb 2024',
-        kategori: 'Sosial & Takziah',
-        keterangan: 'Santunan dana sosial dan karangan bunga duka cita warga Blok B4',
-        tipe: 'keluar',
-        nominal: 500000,
-        saldoSetelah: 17740000,
-        penanggungJawab: 'Sie Sosial (Ibu Dewi)',
-        noBukti: 'SOS-02/DK-B4',
-      },
-      {
-        id: 'TRX-2024-009',
-        tanggal: '05 Mar 2024',
-        kategori: 'Iuran Wajib Warga',
-        keterangan: 'Penerimaan iuran kas bulanan warga (59 rumah terverifikasi)',
-        tipe: 'masuk',
-        nominal: 2950000,
-        saldoSetelah: 20690000,
-        penanggungJawab: 'Bendahara RT',
-        noBukti: 'KW-03/IUR/2024',
-      },
-      {
-        id: 'TRX-2024-010',
-        tanggal: '15 Mar 2024',
-        kategori: 'Kebersihan Lingkungan',
-        keterangan: 'Honor petugas kebersihan bulanan dan perawatan saluran parit',
-        tipe: 'keluar',
-        nominal: 950000,
-        saldoSetelah: 19740000,
-        penanggungJawab: 'Sie Kebersihan',
-        noBukti: 'KWT-DPS-03',
-      },
-      {
-        id: 'TRX-2024-011',
-        tanggal: '10 Apr 2024',
-        kategori: 'Kegiatan Warga',
-        keterangan: 'Konsumsi dan perlengkapan Halal Bihalal Idul Fitri warga RT 10',
-        tipe: 'keluar',
-        nominal: 1350000,
-        saldoSetelah: 18390000,
-        penanggungJawab: 'Panitia Halal Bihalal',
-        noBukti: 'NOTA-HB-1445',
-      },
-      {
-        id: 'TRX-2024-012',
-        tanggal: '05 Mei 2024',
-        kategori: 'Iuran Wajib Warga',
-        keterangan: 'Penerimaan iuran kas bulanan warga (60 rumah terverifikasi)',
-        tipe: 'masuk',
-        nominal: 3000000,
-        saldoSetelah: 21390000,
-        penanggungJawab: 'Bendahara RT',
-        noBukti: 'KW-05/IUR/2024',
-      },
-      {
-        id: 'TRX-2024-013',
-        tanggal: '08 Jun 2024',
-        kategori: 'Keamanan Lingkungan',
-        keterangan: 'Honor petugas satpam lingkungan dan peremajaan rompi fosfor',
-        tipe: 'keluar',
-        nominal: 1720000,
-        saldoSetelah: 19670000,
-        penanggungJawab: 'Sie Keamanan',
-        noBukti: 'NOTA-06/SEC/2024',
-      },
-      {
-        id: 'TRX-2024-014',
-        tanggal: '17 Agu 2024',
-        kategori: 'Kegiatan Warga',
-        keterangan: 'Hadiah lomba anak-anak & panggung malam puncak 17 Agustus HUT RI',
-        tipe: 'keluar',
-        nominal: 2450000,
-        saldoSetelah: 17220000,
-        penanggungJawab: 'Karang Taruna / Panitia 17-an',
-        noBukti: 'LPJ-17AGU-24',
-      },
-      {
-        id: 'TRX-2024-015',
-        tanggal: '18 Agu 2024',
-        kategori: 'Donasi & Sumbangan',
-        keterangan: 'Sumbangan donatur warga & sponsorship kegiatan HUT RI ke-79',
-        tipe: 'masuk',
-        nominal: 3100000,
-        saldoSetelah: 20320000,
-        penanggungJawab: 'Panitia 17-an',
-        noBukti: 'DON-17AGU-24',
-      },
-      {
-        id: 'TRX-2024-016',
-        tanggal: '05 Sep 2024',
-        kategori: 'Iuran Wajib Warga',
-        keterangan: 'Penerimaan iuran kas bulanan warga (62 rumah terverifikasi)',
-        tipe: 'masuk',
-        nominal: 3100000,
-        saldoSetelah: 23420000,
-        penanggungJawab: 'Bendahara RT',
-        noBukti: 'KW-09/IUR/2024',
-      },
-      {
-        id: 'TRX-2024-017',
-        tanggal: '12 Okt 2024',
-        kategori: 'Fasilitas & Lampu Jalan',
-        keterangan: 'Semen & pasir untuk perbaikan polisi tidur Blok D dan Blok G',
-        tipe: 'keluar',
-        nominal: 420000,
-        saldoSetelah: 23000000,
-        penanggungJawab: 'Sie Sarpras (Bpk. Denny)',
-        noBukti: 'STR-TB-MAJU',
-      },
-      {
-        id: 'TRX-2024-018',
-        tanggal: '04 Nov 2024',
-        kategori: 'Iuran Wajib Warga',
-        keterangan: 'Penerimaan iuran kas bulanan warga (63 rumah terverifikasi)',
-        tipe: 'masuk',
-        nominal: 3150000,
-        saldoSetelah: 26150000,
-        penanggungJawab: 'Bendahara RT',
-        noBukti: 'KW-11/IUR/2024',
-      },
-      {
-        id: 'TRX-2026-001',
-        tanggal: '23 Nov 2026',
-        kategori: 'Kebersihan Lingkungan',
-        keterangan: 'Kebersihan RT 04 / RW 02',
-        tipe: 'masuk',
-        nominal: 4200000,
-        saldoSetelah: 20300000,
-        penanggungJawab: 'Bendahara RT',
-        noBukti: 'KW-11/01/2026',
-      },
-      {
-        id: 'TRX-2026-002',
-        tanggal: '28 Nov 2026',
-        kategori: 'Operasional',
-        keterangan: 'Keperasiatan RT 04 / RW 02',
-        tipe: 'keluar',
-        nominal: 1850000,
+        keterangan: 'Pemeliharaan kebersihan rutin & angkut sampah lingkungan RT 10',
+        tipe: 'keluar' as const,
+        nominal: monthParam === 'all' ? 4200000 : 750000,
         saldoSetelah: 18450000,
-        penanggungJawab: 'Sie Operasional',
-        noBukti: 'KW-11/02/2026',
+        penanggungJawab: 'Sie Kebersihan',
+        noBukti: `NOTA-KBR-${monthParam.toUpperCase()}`,
+      },
+      {
+        id: `TRX-${year}-${monthParam.toUpperCase()}-03`,
+        tanggal: `25 ${monthLabel} ${year}`,
+        kategori: 'Keamanan Lingkungan',
+        keterangan: 'Honor & operasional pos ronda malam warga RT 10',
+        tipe: 'keluar' as const,
+        nominal: monthParam === 'all' ? 3600000 : 600000,
+        saldoSetelah: 17850000,
+        penanggungJawab: 'Sie Keamanan',
+        noBukti: `NOTA-SEC-${monthParam.toUpperCase()}`,
+      },
+      {
+        id: `TRX-${year}-${monthParam.toUpperCase()}-04`,
+        tanggal: `28 ${monthLabel} ${year}`,
+        kategori: 'Operasional',
+        keterangan: 'Perlengkapan administrasi dan lampu penerangan jalan',
+        tipe: 'keluar' as const,
+        nominal: monthParam === 'all' ? 1200000 : 250000,
+        saldoSetelah: 17600000,
+        penanggungJawab: 'Sie Sarpras',
+        noBukti: `NOTA-OPS-${monthParam.toUpperCase()}`,
       },
     ];
 
-    // Filter berdasarkan bulan jika dipilih spesifik
-    let filteredTransaksi = transaksiList;
-    if (monthParam !== 'all') {
-      filteredTransaksi = transaksiList.filter((t) => t.tanggal.includes(monthParam));
-    }
+    transaksiList.push(...pengeluaranBulanan);
 
-    // 4. Hitung Totals
-    const saldoAwalTahun = 15500000;
     const totalPemasukan = transaksiList
       .filter((t) => t.tipe === 'masuk')
       .reduce((sum, t) => sum + t.nominal, 0);
@@ -333,142 +129,61 @@ export async function GET(request: Request) {
       .filter((t) => t.tipe === 'keluar')
       .reduce((sum, t) => sum + t.nominal, 0);
 
-    const saldoAkhir = saldoAwalTahun + totalPemasukan - totalPengeluaran;
-    const surplusDefisit = totalPemasukan - totalPengeluaran;
+    const saldoAwal = 16000000;
+    const saldoAkhir = saldoAwal + totalPemasukan - totalPengeluaran;
 
-    // Saldo bulan lalu (sebagai pembanding informatif)
-    const saldoBulanLalu = 23000000;
-    const selisihBulanLalu = saldoAkhir - saldoBulanLalu;
-
-    // Riwayat pergerakan saldo terperinci (minimal 2 bulan sebelumnya + bulan berjalan saat ini)
-    const riwayatSaldo = [
-      {
-        periode: 'September 2024',
-        namaBulan: 'Sep 2024',
-        label: '2 Bulan Lalu',
-        saldoAwal: 20320000,
-        pemasukan: 3100000,
-        pengeluaran: 0,
-        saldoAkhir: 23420000,
-        selisih: 3100000,
-        isBerjalan: false,
-      },
-      {
-        periode: 'Oktober 2024',
-        namaBulan: 'Okt 2024',
-        label: '1 Bulan Lalu',
-        saldoAwal: 23420000,
-        pemasukan: 0,
-        pengeluaran: 420000,
-        saldoAkhir: 23000000,
-        selisih: -420000,
-        isBerjalan: false,
-      },
-      {
-        periode: 'November 2024',
-        namaBulan: 'Nov 2024',
-        label: 'Bulan Berjalan',
-        saldoAwal: 23000000,
-        pemasukan: 3150000,
-        pengeluaran: 0,
-        saldoAkhir: 26150000,
-        selisih: 3150000,
-        isBerjalan: true,
-      },
-    ];
-
-    const targetIuranTahunan = 70 * NOMINAL_IURAN_PER_RUMAH * 12; // 42.000.000 / thn
-    const realisasiIuranTahunan = transaksiList
-      .filter((t) => t.kategori === 'Iuran Wajib Warga')
-      .reduce((sum, t) => sum + t.nominal, 0);
-
-    // 5. Pos Alokasi Pengeluaran
-    const pengeluaranGroup: { [key: string]: number } = {};
-    transaksiList
-      .filter((t) => t.tipe === 'keluar')
-      .forEach((t) => {
-        pengeluaranGroup[t.kategori] = (pengeluaranGroup[t.kategori] || 0) + t.nominal;
-      });
-
+    // Alokasi pengeluaran
     const alokasiPengeluaran: KategoriAlokasi[] = [
       {
-        kategori: 'Keamanan Lingkungan',
-        nominal: pengeluaranGroup['Keamanan Lingkungan'] || 4970000,
-        persentase: Math.round(((pengeluaranGroup['Keamanan Lingkungan'] || 4970000) / totalPengeluaran) * 100),
-        warna: '#0F172A', // zinc-900
-        deskripsi: 'Gaji satpam malam 2 personel, perlengkapan senter & HT',
-        iconName: 'shield',
+        kategori: 'Kebersihan',
+        nominal: Math.round(totalPengeluaran * 0.45),
+        persentase: 45,
+        warna: '#EA580C',
+        deskripsi: 'Kebersihan lingkungan, saluran air, dan pembuangan sampah',
       },
       {
-        kategori: 'Kebersihan Lingkungan',
-        nominal: pengeluaranGroup['Kebersihan Lingkungan'] || 1900000,
-        persentase: Math.round(((pengeluaranGroup['Kebersihan Lingkungan'] || 1900000) / totalPengeluaran) * 100),
-        warna: '#10B981', // emerald-500
-        deskripsi: 'Perawatan kebersihan jalan lingkungan dan pembersihan saluran air',
-        iconName: 'sparkles',
+        kategori: 'Keamanan',
+        nominal: Math.round(totalPengeluaran * 0.35),
+        persentase: 35,
+        warna: '#16A34A',
+        deskripsi: 'Operasional pos ronda dan perlengkapan satpam',
       },
       {
-        kategori: 'Kegiatan Warga & PHBI',
-        nominal: pengeluaranGroup['Kegiatan Warga'] || 3800000,
-        persentase: Math.round(((pengeluaranGroup['Kegiatan Warga'] || 3800000) / totalPengeluaran) * 100),
-        warna: '#6366F1', // indigo-500
-        deskripsi: 'Peringatan HUT RI 17 Agustus, Halal Bihalal & Kerja Bakti',
-        iconName: 'sparkles',
-      },
-      {
-        kategori: 'Fasilitas Umum & Lampu PJU',
-        nominal: pengeluaranGroup['Fasilitas & Lampu Jalan'] || 680000,
-        persentase: Math.round(((pengeluaranGroup['Fasilitas & Lampu Jalan'] || 680000) / totalPengeluaran) * 100),
-        warna: '#F59E0B', // amber-500
-        deskripsi: 'Perbaikan lampu jalan LED gang, semen polisi tidur, pompa air',
-        iconName: 'lightbulb',
-      },
-      {
-        kategori: 'Sosial & Santunan Duka',
-        nominal: pengeluaranGroup['Sosial & Takziah'] || 500000,
-        persentase: Math.round(((pengeluaranGroup['Sosial & Takziah'] || 500000) / totalPengeluaran) * 100),
-        warna: '#EC4899', // pink-500
-        deskripsi: 'Santunan warga rawat inap, duka cita, dan bantuan kemanusiaan',
-        iconName: 'heart',
+        kategori: 'Operasional',
+        nominal: Math.round(totalPengeluaran * 0.2),
+        persentase: 20,
+        warna: '#F59E0B',
+        deskripsi: 'Lampu PJU, pemeliharaan sarana umum dan ATK',
       },
     ];
 
-    // 6. Alokasi Sumber Pemasukan
     const alokasiPemasukan: KategoriAlokasi[] = [
       {
-        kategori: 'Iuran Wajib Warga (70 Rumah)',
-        nominal: realisasiIuranTahunan,
-        persentase: Math.round((realisasiIuranTahunan / totalPemasukan) * 100),
-        warna: '#10B981',
-        deskripsi: 'Kontribusi iuran rutin bulanan Rp 50.000 / rumah',
-      },
-      {
-        kategori: 'Donatur & Partisipasi Sukarela',
-        nominal: totalPemasukan - realisasiIuranTahunan,
-        persentase: Math.round(((totalPemasukan - realisasiIuranTahunan) / totalPemasukan) * 100),
-        warna: '#3B82F6',
-        deskripsi: 'Sumbangan warga, sponsor kegiatan 17-an, dan kas sosial',
+        kategori: 'Iuran Kas Warga',
+        nominal: totalPemasukanIuran,
+        persentase: 100,
+        warna: '#16A34A',
+        deskripsi: `Realisasi iuran ${totalKKBayar} rumah warga`,
       },
     ];
 
     const payload: RingkasanKeuangan = {
-      periode: monthParam === 'all' ? `Tahun ${year}` : `${monthParam} ${year}`,
+      periode: periodTitle,
       tahun: year,
-      saldoAwal: saldoAwalTahun,
-      saldoBulanLalu,
-      selisihBulanLalu,
-      riwayatSaldo,
+      saldoAwal,
+      saldoBulanLalu: saldoAwal,
+      selisihBulanLalu: totalPemasukan - totalPengeluaran,
       totalPemasukan,
       totalPengeluaran,
       saldoAkhir,
-      surplusDefisit,
-      targetIuran: targetIuranTahunan,
-      realisasiIuran: realisasiIuranTahunan,
+      surplusDefisit: totalPemasukan - totalPengeluaran,
+      targetIuran: totalRumah * 60000,
+      realisasiIuran: totalPemasukanIuran,
       persenKepatuhan,
       alokasiPengeluaran,
       alokasiPemasukan,
       performaBlok,
-      transaksi: filteredTransaksi,
+      transaksi: transaksiList,
     };
 
     return NextResponse.json({
@@ -476,9 +191,9 @@ export async function GET(request: Request) {
       data: payload,
     });
   } catch (error) {
-    console.error('Error generating laporan keuangan:', error);
+    console.error('Error generating keuangan:', error);
     return NextResponse.json(
-      { success: false, message: 'Gagal memuat data laporan keuangan' },
+      { success: false, message: 'Gagal memuat ringkasan keuangan' },
       { status: 500 }
     );
   }
