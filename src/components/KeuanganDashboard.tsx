@@ -144,7 +144,7 @@ export default function KeuanganDashboard() {
     );
   }, [liveIuran, searchWarga]);
 
-  // Ekspor PDF Laporan Keuangan
+  // Ekspor PDF Laporan Keuangan (Ringan & Cepat, Kompresi Optimal ~250-400 KB)
   const handleExportPDF = async () => {
     const html2canvas = (await import('html2canvas')).default;
     const { jsPDF } = await import('jspdf');
@@ -152,20 +152,39 @@ export default function KeuanganDashboard() {
     const element = document.getElementById('laporan-keuangan-container');
     if (!element) return;
 
-    const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#F8FAFC' });
-    const imgData = canvas.toDataURL('image/png');
+    // Gunakan scale 1.5 dan JPEG 0.8 agar ukuran file kecil (sebelumnya PNG mentah scale 2 membuat file sampai 12 MB)
+    const canvas = await html2canvas(element, {
+      scale: 1.5,
+      backgroundColor: '#F8FAFC',
+      useCORS: true,
+      logging: false,
+    });
+    const imgData = canvas.toDataURL('image/jpeg', 0.8);
 
-    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdf = new jsPDF({
+      orientation: 'p',
+      unit: 'mm',
+      format: 'a4',
+      compress: true, // kompresi stream PDF aktif
+    });
+
     const pageWidth = pdf.internal.pageSize.getWidth();
-    const imgWidth = pageWidth - 16;
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 8;
+    const imgWidth = pageWidth - margin * 2;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-    pdf.setFontSize(14);
-    pdf.text(`Laporan Keuangan RT 04 / RW 02 - Periode ${selectedPeriod}`, 8, 12);
-    pdf.setFontSize(9);
-    pdf.setTextColor(100);
-    pdf.text(`Dokumen resmi transparansi kas warga RT 10. Dicetak pada: ${new Date().toLocaleDateString('id-ID', { dateStyle: 'full' })}`, 8, 17);
-    pdf.addImage(imgData, 'PNG', 8, 22, imgWidth, imgHeight);
+    pdf.setFontSize(13);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(24, 24, 27);
+    pdf.text(`Laporan Keuangan RT 04 / RW 02 - Periode ${selectedPeriod}`, margin, 11);
+
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(113, 113, 122);
+    pdf.text(`Dokumen resmi transparansi kas warga RT 10. Dicetak pada: ${new Date().toLocaleDateString('id-ID', { dateStyle: 'full' })}`, margin, 16);
+
+    pdf.addImage(imgData, 'JPEG', margin, 20, imgWidth, Math.min(imgHeight, pageHeight - 25), undefined, 'FAST');
     pdf.save(`Laporan_Keuangan_RT10_${selectedPeriod.replace(/\s+/g, '_')}.pdf`);
   };
 
