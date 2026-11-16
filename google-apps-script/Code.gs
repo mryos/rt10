@@ -248,11 +248,13 @@ function isiDummyIuran2024() {
 
 function doGet(e) {
   try {
-    var action = e.parameter.action;
+    var action = (e && e.parameter && e.parameter.action) ? e.parameter.action : '';
 
     switch (action) {
       case 'getIuran':
         return respond(getIuranData(e.parameter.period));
+      case 'getIuran2026':
+        return respond(getIuran2026Data());
       case 'getBerita':
         return respond(getBeritaData());
       case 'getBeritaById':
@@ -262,15 +264,19 @@ function doGet(e) {
       case 'debugHeaders':
         var ssDbg = SpreadsheetApp.getActiveSpreadsheet();
         var shDbg = ssDbg.getSheetByName('DB_Iuran');
+        var shKeu = ssDbg.getSheetByName('DB_Keuangan');
         return respond({
           success: true,
           sheets: ssDbg.getSheets().map(function(s) { return s.getName(); }),
-          headers: shDbg ? shDbg.getDataRange().getValues()[0].map(function(h) {
-            return h instanceof Date ? Utilities.formatDate(h, 'Asia/Jakarta', 'yyyy-MM-dd') : h.toString();
+          iuranHeaders: shDbg ? shDbg.getDataRange().getValues()[0].map(function(h) {
+            return formatHeader(h);
+          }) : null,
+          keuanganHeaders: shKeu ? shKeu.getDataRange().getValues()[0].map(function(h) {
+            return formatHeader(h);
           }) : null
         });
       default:
-        return respond({ success: false, message: 'Aksi tidak valid' });
+        return respond({ success: false, message: 'Aksi tidak valid: ' + action });
     }
   } catch (err) {
     return respond({ success: false, message: err.toString() });
@@ -299,11 +305,116 @@ function respond(data) {
 }
 
 // ============================================================
-// IURAN DATA
+// PARSER & NORMALISASI IURAN (DUES) - MENDUKUNG ANGKA & CHECKBOX
+// ============================================================
+
+/**
+ * Parsing sel iuran: mendukung angka biasa (e.g. 50000, 1), 
+ * teks nominal (e.g. "Rp 50.000"), maupun boolean checkbox (TRUE/FALSE)
+ */
+function parseDuesValue(val) {
+  if (val === true || val === 'TRUE' || val === 'true') {
+    return { status: true, nominal: 50000 };
+  }
+  if (typeof val === 'number' && !isNaN(val)) {
+    if (val > 0) {
+      var nom = (val === 1) ? 50000 : val;
+      return { status: true, nominal: nom };
+    }
+    return { status: false, nominal: 0 };
+  }
+  if (typeof val === 'string') {
+    var trimmed = val.trim();
+    if (trimmed.toLowerCase() === 'lunas' || trimmed.toLowerCase() === 'v' || trimmed === '✓') {
+      return { status: true, nominal: 50000 };
+    }
+    var cleaned = trimmed.replace(/[^0-9]/g, '');
+    if (cleaned.length > 0) {
+      var num = parseFloat(cleaned);
+      if (num > 0) {
+        var nomStr = (num === 1) ? 50000 : num;
+        return { status: true, nominal: nomStr };
+      }
+    }
+  }
+  return { status: false, nominal: 0 };
+}
+
+/**
+ * Format header: ubah Date object Google Sheet menjadi format teks baku
+ */
+function formatHeader(val) {
+  if (val === null || val === undefined) return '';
+  if (val instanceof Date) {
+    var indoMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    return indoMonths[val.getMonth()] + ' ' + val.getFullYear();
+  }
+  return val.toString().trim();
+}
+
+/**
+ * Normalisasi string bulan/periode untuk pencocokan toleran
+ */
+function normalizeStr(s) {
+  if (!s) return '';
+  return s.toString().toLowerCase()
+    .replace(/januari/g, 'jan')
+    .replace(/februari|pebruari/g, 'feb')
+    .replace(/maret/g, 'mar')
+    .replace(/april/g, 'apr')
+    .replace(/mei|may/g, 'mei')
+    .replace(/juni|june/g, 'jun')
+    .replace(/juli|july/g, 'jul')
+    .replace(/agustus|august/g, 'agu')
+    .replace(/september/g, 'sep')
+    .replace(/oktober|october/g, 'okt')
+    .replace(/november/g, 'nov')
+    .replace(/desember|december/g, 'des')
+    .replace(/[^a-z0-9]/g, '');
+}
+
+/**
+ * Cari indeks kolom header yang sesuai dengan nama periode
+ */
+function findHeaderColumn(headers, targetPeriod) {
+  var normTarget = normalizeStr(targetPeriod);
+  if (!normTarget) return -1;
+
+  // 1. Pencocokan persis
+  for (var c = 0; c < headers.length; c++) {
+    var hFormatted = formatHeader(headers[c]);
+    var normH = normalizeStr(hFormatted);
+    if (normH === normTarget) return c;
+  }
+
+  // 2. Pencocokan substring
+  for (var c2 = 0; c2 < headers.length; c2++) {
+    var hFormatted2 = formatHeader(headers[c2]);
+    var normH2 = normalizeStr(hFormatted2);
+    if (normH2 && (normH2.indexOf(normTarget) !== -1 || normTarget.indexOf(normH2) !== -1)) {
+      return c2;
+    }
+  }
+
+  // 3. Jika target memuat 2026, ambil kolom 2026 terbaru
+  if (normTarget.indexOf('2026') !== -1) {
+    for (var c3 = headers.length - 1; c3 >= 0; c3--) {
+      var normH3 = normalizeStr(formatHeader(headers[c3]));
+      if (normH3.indexOf('2026') !== -1) {
+        return c3;
+      }
+    }
+  }
+
+  return -1;
+}
+
+// ============================================================
+// IURAN DATA BULANAN (Mendukung Input Angka & Checkbox)
 // ============================================================
 function getIuranData(period) {
-  if (!period) {
-    return { success: false, message: 'Parameter period wajib diisi' };
+  if (!period || period === '2026' || period === 'all' || period.toString().trim() === '') {
+    return getIuran2026Data();
   }
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -313,63 +424,150 @@ function getIuranData(period) {
   }
 
   var data = sheet.getDataRange().getValues();
+  if (data.length === 0) {
+    return { success: false, message: 'Sheet DB_Iuran kosong.' };
+  }
+
   var headers = data[0];
+  var allHeadersFormatted = headers.map(function(h) { return formatHeader(h); });
 
-  var colIndex = -1;
-  var targetPeriod = period.toString().trim().toLowerCase().replace(/\s+/g, '');
-
-  for (var c = 0; c < headers.length; c++) {
-    var hVal = headers[c];
-    var hStr = '';
-    if (hVal instanceof Date) {
-      hStr = Utilities.formatDate(hVal, 'Asia/Jakarta', 'MMM yyyy').toLowerCase().replace(/\s+/g, '');
-    } else {
-      hStr = hVal.toString().trim().toLowerCase().replace(/\s+/g, '');
-    }
-
-    if (hStr === targetPeriod) {
-      colIndex = c;
-      break;
-    }
-  }
+  var colIndex = findHeaderColumn(headers, period);
 
   if (colIndex === -1) {
-    for (var c2 = 0; c2 < headers.length; c2++) {
-      var hVal2 = headers[c2];
-      var hStr2 = (hVal2 instanceof Date 
-        ? Utilities.formatDate(hVal2, 'Asia/Jakarta', 'MMM yyyy') 
-        : hVal2.toString()).trim().toLowerCase().replace(/\s+/g, '');
-      if (hStr2.indexOf(targetPeriod) !== -1 || targetPeriod.indexOf(hStr2) !== -1) {
-        colIndex = c2;
-        break;
-      }
-    }
-  }
-
-  if (colIndex === -1) {
-    var availableHeaders = [];
-    for (var k = 0; k < Math.min(headers.length, 15); k++) {
-      var val = headers[k];
-      availableHeaders.push(val instanceof Date ? Utilities.formatDate(val, 'Asia/Jakarta', 'dd/MM/yyyy') : val.toString());
-    }
-    return { 
-      success: false, 
+    return {
+      success: false,
       message: 'Periode tidak ditemukan: ' + period,
-      availableHeadersPreview: availableHeaders
+      availableHeaders: allHeadersFormatted
     };
   }
 
   var result = [];
+  var lunasCount = 0;
+  var sumNominal = 0;
+
   for (var i = 1; i < data.length; i++) {
     if (data[i][0] === '' || data[i][0] === null) continue;
+
+    var parsed = parseDuesValue(data[i][colIndex]);
+    if (parsed.status) {
+      lunasCount++;
+      sumNominal += parsed.nominal;
+    }
+
     result.push({
       noBlok: data[i][0].toString(),
-      namaWarga: data[i][1].toString(),
-      status: data[i][colIndex] === true || data[i][colIndex] === 'TRUE'
+      namaWarga: (data[i][1] || '').toString(),
+      status: parsed.status,
+      nominal: parsed.nominal
     });
   }
 
-  return { success: true, period: period, data: result };
+  var totalRumah = result.length;
+  var persenLunas = totalRumah > 0 ? Math.round((lunasCount / totalRumah) * 100) : 0;
+
+  return {
+    success: true,
+    period: period,
+    matchedHeader: formatHeader(headers[colIndex]),
+    totalRumah: totalRumah,
+    totalLunas: lunasCount,
+    totalNominal: sumNominal,
+    persenLunas: persenLunas,
+    data: result,
+    availableHeaders: allHeadersFormatted
+  };
+}
+
+// ============================================================
+// IURAN DATA TAHUN 2026 (Ringkasan Menyeluruh 2026)
+// ============================================================
+function getIuran2026Data() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('DB_Iuran');
+  if (!sheet) {
+    return { success: false, message: 'Sheet DB_Iuran belum dibuat.' };
+  }
+
+  var data = sheet.getDataRange().getValues();
+  if (data.length === 0) {
+    return { success: false, message: 'Sheet DB_Iuran kosong.' };
+  }
+
+  var headers = data[0];
+  var allHeadersFormatted = headers.map(function(h) { return formatHeader(h); });
+
+  var cols2026 = [];
+  for (var c = 0; c < headers.length; c++) {
+    var hFormatted = formatHeader(headers[c]);
+    var normH = normalizeStr(hFormatted);
+    if (normH.indexOf('2026') !== -1) {
+      cols2026.push({ colIndex: c, header: hFormatted, norm: normH });
+    }
+  }
+
+  // Jika tidak ada kolom yang secara spesifik mengandung '2026', fallback ke 12 kolom terakhir atau semua kolom periode
+  if (cols2026.length === 0) {
+    for (var c2 = 2; c2 < headers.length; c2++) {
+      cols2026.push({ colIndex: c2, header: formatHeader(headers[c2]), norm: normalizeStr(formatHeader(headers[c2])) });
+    }
+  }
+
+  var result = [];
+  var totalNominal2026 = 0;
+  var totalLunasCount = 0;
+
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] === '' || data[i][0] === null) continue;
+
+    var noBlok = data[i][0].toString();
+    var namaWarga = (data[i][1] || '').toString();
+    var houseNominal = 0;
+    var houseBulanLunas = 0;
+    var monthlyStatus = {};
+
+    for (var k = 0; k < cols2026.length; k++) {
+      var colIdx = cols2026[k].colIndex;
+      var hName = cols2026[k].header;
+      var cellVal = data[i][colIdx];
+      var parsed = parseDuesValue(cellVal);
+
+      if (parsed.status) {
+        houseBulanLunas++;
+        houseNominal += parsed.nominal;
+      }
+      monthlyStatus[hName] = parsed;
+    }
+
+    if (houseBulanLunas > 0) {
+      totalLunasCount++;
+    }
+    totalNominal2026 += houseNominal;
+
+    result.push({
+      noBlok: noBlok,
+      namaWarga: namaWarga,
+      status: houseBulanLunas > 0,
+      totalNominal: houseNominal,
+      bulanLunasCount: houseBulanLunas,
+      totalBulan: cols2026.length,
+      monthlyStatus: monthlyStatus
+    });
+  }
+
+  var totalRumah = result.length;
+  var persenKepatuhan = totalRumah > 0 ? Math.round((totalLunasCount / totalRumah) * 100) : 0;
+
+  return {
+    success: true,
+    year: 2026,
+    columns2026: cols2026.map(function(col) { return col.header; }),
+    totalRumah: totalRumah,
+    totalRumahSudahBayar: totalLunasCount,
+    totalNominalTerkumpul: totalNominal2026,
+    persenKepatuhan: persenKepatuhan,
+    data: result,
+    availableHeaders: allHeadersFormatted
+  };
 }
 
 // ============================================================

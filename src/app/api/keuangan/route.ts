@@ -24,19 +24,19 @@ const MONTH_NAMES = [
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const yearParam = searchParams.get('year') || '2024';
-  const monthParam = searchParams.get('month') || 'all'; // 'all' atau 'Jan', 'Feb', dst.
-  const year = parseInt(yearParam, 10) || 2024;
+  const yearParam = searchParams.get('year') || '2026';
+  const monthParam = searchParams.get('month') || 'Nov'; // default ke tahun 2026 dan bulan Nov
+  const year = parseInt(yearParam, 10) || 2026;
 
   try {
-    // 1. Coba ambil data iuran bulan aktif dari Apps Script untuk sinkronisasi live jika memungkinkan
-    let liveIuranData: { noBlok: string; status: boolean }[] | null = null;
-    const testPeriod = monthParam === 'all' ? `Okt ${year}` : `${monthParam} ${year}`;
+    // 1. Coba ambil data iuran 2026 dari Apps Script untuk sinkronisasi live
+    let liveIuranData: { noBlok: string; status: boolean; nominal?: number }[] | null = null;
+    const testPeriod = monthParam === 'all' ? `2026` : `${monthParam} ${year}`;
 
     try {
       const resIuran = await fetch(
         `${APPS_SCRIPT_URL}?action=getIuran&period=${encodeURIComponent(testPeriod)}`,
-        { next: { revalidate: 60 }, redirect: 'follow' }
+        { next: { revalidate: 30 }, redirect: 'follow' }
       );
       const jsonIuran = await resIuran.json();
       if (jsonIuran && jsonIuran.success && Array.isArray(jsonIuran.data)) {

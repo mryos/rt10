@@ -6,24 +6,56 @@ import type { RingkasanKeuangan, TransaksiKeuangan } from '@/lib/types';
 export default function KeuanganDashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState('November 2026');
   const [data, setData] = useState<RingkasanKeuangan | null>(null);
+  const [liveIuran, setLiveIuran] = useState<{
+    totalRumah: number;
+    totalLunas: number;
+    totalNominal: number;
+    persenLunas: number;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedNota, setSelectedNota] = useState<TransaksiKeuangan | null>(null);
 
-  // Ambil data keuangan
+  // Mapping periode dropdown ke parameter API
+  const periodToQuery = useMemo(() => {
+    switch (selectedPeriod) {
+      case 'November 2026': return { month: 'Nov', iuranPeriod: 'Nov 2026' };
+      case 'Oktober 2026': return { month: 'Okt', iuranPeriod: 'Okt 2026' };
+      case 'September 2026': return { month: 'Sep', iuranPeriod: 'Sep 2026' };
+      case 'Agustus 2026': return { month: 'Agu', iuranPeriod: 'Agu 2026' };
+      case 'Semua Periode 2026': return { month: 'all', iuranPeriod: '2026' };
+      default: return { month: 'Nov', iuranPeriod: 'Nov 2026' };
+    }
+  }, [selectedPeriod]);
+
+  // Ambil data keuangan dan data iuran live
   const fetchKeuangan = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/keuangan?year=2026&month=Nov`);
-      const json = await res.json();
-      if (json.success && json.data) {
-        setData(json.data);
+      const [resKeu, resIuran] = await Promise.all([
+        fetch(`/api/keuangan?year=2026&month=${periodToQuery.month}`),
+        fetch(`/api/iuran?period=${encodeURIComponent(periodToQuery.iuranPeriod)}`)
+      ]);
+
+      const jsonKeu = await resKeu.json();
+      if (jsonKeu.success && jsonKeu.data) {
+        setData(jsonKeu.data);
+      }
+
+      const jsonIuran = await resIuran.json();
+      if (jsonIuran.success) {
+        setLiveIuran({
+          totalRumah: jsonIuran.totalRumah || (jsonIuran.data ? jsonIuran.data.length : 70),
+          totalLunas: jsonIuran.totalLunas !== undefined ? jsonIuran.totalLunas : (jsonIuran.totalRumahSudahBayar || 0),
+          totalNominal: jsonIuran.totalNominal !== undefined ? jsonIuran.totalNominal : (jsonIuran.totalNominalTerkumpul || 0),
+          persenLunas: jsonIuran.persenLunas !== undefined ? jsonIuran.persenLunas : (jsonIuran.persenKepatuhan || 0),
+        });
       }
     } catch (err) {
       console.error('Gagal memuat keuangan:', err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [periodToQuery]);
 
   useEffect(() => {
     fetchKeuangan();
@@ -38,13 +70,16 @@ export default function KeuanganDashboard() {
     }).format(val);
   };
 
-  // Nilai ringkasan kas (default sesuai mockup gambar bila belum ada data dinamis)
+  // Nilai ringkasan kas (mengutamakan data input dinamis jika ada, fallback mockup gambar)
+  const hasLiveIuran = liveIuran && liveIuran.totalLunas > 0;
   const saldoKasSaatIni = data?.saldoAkhir ? (selectedPeriod === 'November 2026' ? 18450000 : data.saldoAkhir) : 18450000;
-  const totalPemasukan = data?.totalPemasukan ? (selectedPeriod === 'November 2026' ? 4200000 : data.totalPemasukan) : 4200000;
+  const totalPemasukan = hasLiveIuran && liveIuran.totalNominal > 0
+    ? liveIuran.totalNominal
+    : (data?.totalPemasukan ? (selectedPeriod === 'November 2026' ? 4200000 : data.totalPemasukan) : 4200000);
   const totalPengeluaran = data?.totalPengeluaran ? (selectedPeriod === 'November 2026' ? 1850000 : data.totalPengeluaran) : 1850000;
-  const progressIuran = 85;
-  const kkSudahBayar = 85;
-  const totalKK = 100;
+  const progressIuran = hasLiveIuran ? liveIuran.persenLunas : 85;
+  const kkSudahBayar = hasLiveIuran ? liveIuran.totalLunas : 85;
+  const totalKK = hasLiveIuran ? liveIuran.totalRumah : 100;
 
   // Daftar transaksi mutasi kas
   const transaksiList: TransaksiKeuangan[] = useMemo(() => {
