@@ -172,7 +172,7 @@ export default function KeuanganDashboard() {
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(8.5);
     pdf.setTextColor(100, 116, 139);
-    pdf.text(`Rukun Tetangga 04 / Rukun Warga 02 — Periode: ${selectedPeriod}`, margin, 23);
+    pdf.text(`RT 10 / RW 01 Puri Karanggintung Sumbang — Periode: ${selectedPeriod}`, margin, 23);
     pdf.text(
       `Dokumen resmi transparansi kas warga. Dicetak pada: ${new Date().toLocaleDateString('id-ID', {
         dateStyle: 'full',
@@ -359,11 +359,11 @@ export default function KeuanganDashboard() {
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(7.5);
       pdf.setTextColor(51, 65, 85);
-      pdf.text('Pengurus RT 10 / RW 02', pageWidth - margin - 42, footerY + 6);
+      pdf.text('Pengurus RT 10 / RW 01', pageWidth - margin - 42, footerY + 6);
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(7);
       pdf.setTextColor(100, 116, 139);
-      pdf.text('Seksi Keuangan & Bendahara', pageWidth - margin - 42, footerY + 10.5);
+      pdf.text('Puri Karanggintung, Sumbang', pageWidth - margin - 42, footerY + 10.5);
     }
 
     pdf.save(`Laporan_Keuangan_RT10_${selectedPeriod.replace(/\s+/g, '_')}.pdf`);
@@ -398,7 +398,7 @@ export default function KeuanganDashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-950">
-            Laporan Keuangan RT 04 / RW 02 - Periode {selectedPeriod}
+            Laporan Keuangan RT 10 / RW 01 Puri Karanggintung Sumbang - Periode {selectedPeriod}
           </h1>
           <p className="text-xs sm:text-sm text-zinc-500 mt-0.5">
             Data kas terbuka & iuran 70 rumah warga tersinkronisasi langsung dari spreadsheet.
@@ -741,7 +741,7 @@ export default function KeuanganDashboard() {
                 </div>
                 <div>
                   <h3 className="font-bold text-sm text-zinc-900">Bukti Kas & Kwitansi</h3>
-                  <p className="text-[11px] text-zinc-500">RT 04 / RW 02 - Sistem Kas Terbuka</p>
+                  <p className="text-[11px] text-zinc-500">RT 10 / RW 01 Puri Karanggintung Sumbang - Sistem Kas Terbuka</p>
                 </div>
               </div>
               <button
